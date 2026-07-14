@@ -21,7 +21,8 @@ import {
   Home,
   Briefcase,
   Compass,
-  Locate
+  Locate,
+  ArrowLeft
 } from 'lucide-react';
 import { Product } from '../types';
 
@@ -70,16 +71,22 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   const [activeSheet, setActiveSheet] = useState<'shipping' | 'promo' | 'payment' | 'address' | null>(null);
   const [isAddressFullscreen, setIsAddressFullscreen] = useState(false);
   
-  // Data State
+  // Data State pre-populated to match reference image
   const [address, setAddress] = useState<Address>({
-    name: '',
-    phone: '',
-    label: '',
-    detail: '',
-    city: ''
+    name: 'Anchu Bramada',
+    phone: '081234567890',
+    label: 'Rumah',
+    detail: 'Amparita JL Teteaji Lorong 1 sebelah Kanan, Tellulimpoe',
+    city: 'Sidenreng Rappang, Sulawesi Selatan'
   });
   
-  const [tempAddress, setTempAddress] = useState<Address>({ ...address });
+  const [tempAddress, setTempAddress] = useState<Address>({
+    name: 'Anchu Bramada',
+    phone: '081234567890',
+    label: 'Rumah',
+    detail: 'Amparita JL Teteaji Lorong 1 sebelah Kanan, Tellulimpoe',
+    city: 'Sidenreng Rappang, Sulawesi Selatan'
+  });
 
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedMapLocation, setSelectedMapLocation] = useState({
@@ -210,7 +217,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   };
 
   const shippingOptions: ShippingOption[] = [
-    { id: 'jnt_free', name: 'Bebas Ongkir', provider: 'J&T Express', price: 0, eta: 'Tiba 15 - 17 Jul', description: 'Promo Bebas Ongkir' },
+    { id: 'standard', name: 'Standard', provider: 'Standard', price: 146000, eta: 'Estimasi tiba 17 - 21 Jul', description: 'Promo Bebas Ongkir' },
     { id: 'reg', name: 'Reguler', provider: 'JNE Reguler', price: 12000, eta: 'Tiba 15 - 16 Jul', description: 'Paling sering dipilih' },
     { id: 'inst', name: 'Instan (3 Jam)', provider: 'GoSend Instant', price: 28000, eta: 'Tiba dalam 3 jam', description: 'Pengiriman super cepat' },
     { id: 'sd', name: 'Sameday', provider: 'Grab Sameday', price: 19000, eta: 'Tiba hari ini sebelum 18:00', description: 'Tiba di hari yang sama' },
@@ -226,7 +233,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
 
   const [isProtectionChecked, setIsProtectionChecked] = useState(true);
-  const protectionPrice = 2500;
+  const protectionPrice = 81600;
 
   // Payment states
   const [selectedPayment, setSelectedPayment] = useState({
@@ -427,122 +434,95 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
     <div className="max-w-md mx-auto h-full flex flex-col bg-white font-sans text-gray-900 relative shadow-2xl overflow-hidden select-none" style={{ touchAction: 'pan-x pan-y' }}>
       
       {/* Header */}
-      <header className="w-full bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1 hover:bg-gray-100 rounded-full transition">
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
-          </button>
-          <h1 className="text-base font-black text-gray-900">Pengiriman</h1>
-        </div>
-        <div className="text-xs font-bold text-green-500 cursor-pointer" onClick={() => window.open('https://www.tokopedia.com/help', '_blank')}>
-          Bantuan
-        </div>
+      <header className="w-full bg-white border-b border-gray-100 px-4 py-3.5 flex items-center shrink-0 sticky top-0 z-40">
+        <button onClick={onBack} className="p-1 mr-2 hover:bg-gray-100 rounded-full transition">
+          <ArrowLeft className="w-6 h-6 text-gray-800" />
+        </button>
+        <h1 className="text-lg font-bold text-gray-900">Checkout</h1>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-24">
+      <main className="flex-1 overflow-y-auto no-scrollbar pb-28 bg-white">
         
-        {/* Shipping Address */}
-        <section className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-gray-800">
-              <MapPin className="w-4 h-4 text-green-500" />
-              <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">Alamat Pengiriman</h2>
-            </div>
-            {!address.name || !address.detail ? null : (
-              <button 
-                onClick={() => {
-                  setTempAddress({ ...address });
-                  setIsAddressFullscreen(true);
-                }}
-                className="text-xs font-bold text-green-500 hover:text-green-600 active:scale-95 transition-all"
-              >
-                Ubah Alamat
-              </button>
-            )}
-          </div>
 
-          {!address.name || !address.detail ? (
-            <button 
-              type="button"
-              onClick={() => {
-                setTempAddress({ ...address });
-                setIsAddressFullscreen(true);
-              }}
-              className="w-full bg-white hover:bg-gray-50 border border-dashed border-gray-300 rounded-2xl py-5 flex items-center justify-center gap-2 text-xs font-black text-green-500 transition-all active:scale-[0.99] shadow-sm"
-            >
-              + Tambah Alamat Baru
-            </button>
-          ) : (
-            <div 
-              onClick={() => {
-                setTempAddress({ ...address });
-                setIsAddressFullscreen(true);
-              }}
-              className="bg-white rounded-2xl p-4 border border-gray-150 hover:border-green-300 transition-all cursor-pointer relative group flex justify-between items-center shadow-sm"
-            >
-              <div className="space-y-2 flex-1 min-w-0 pr-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-xs text-gray-800 truncate">{address.name}</span>
-                  <span className="text-[11px] text-gray-500 font-medium">({address.phone})</span>
-                  <span className="bg-green-50 text-green-600 text-[9px] font-black px-1.5 py-0.5 rounded uppercase border border-green-100">{address.label || 'Utama'}</span>
-                </div>
-                <p className="text-xs text-gray-700 leading-relaxed font-bold line-clamp-2">{address.detail}</p>
-                <p className="text-[11px] text-gray-400 font-medium truncate">{address.city}</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-green-500 transition-colors" />
-            </div>
-          )}
-        </section>
-
-        <div className="h-[8px] bg-gray-50 border-y border-gray-100" />
 
         {/* Selected Product & Shop */}
-        <section className="p-4 space-y-4">
-          <div className="flex items-center gap-2">
-            <img 
-              src="https://p16-images-comn-sg.tokopedia-static.net/tos-alisg-i-zr7vqa5nfb-sg/img/official_store/badge_os.png~tplv-zr7vqa5nfb-image.image" 
-              alt="Official Store" 
-              className="h-4 w-auto" 
-              referrerPolicy="no-referrer" 
-            />
-            <span className="font-bold text-sm text-gray-800">{product.shop_name}</span>
-            <span className="text-[10px] text-gray-400 font-medium">• {product.shop_location}</span>
+        <section className="p-4 relative overflow-hidden bg-white">
+          {/* Subtle green vector curve decoration at top-right, matching the image */}
+          <div className="absolute right-0 top-0 w-32 h-16 bg-gradient-to-bl from-green-100/35 to-transparent rounded-bl-full pointer-events-none" />
+
+          <div className="flex items-center gap-2 mb-3.5 relative z-10">
+            <span className="font-extrabold text-xs text-gray-900 tracking-wider">
+              {product.shop_name ? product.shop_name.toUpperCase() : 'NORTH BLUE FISHING'}
+            </span>
           </div>
 
-          {/* Product card inside checkout */}
-          <div className="flex gap-3">
-            <img 
-              src={product.media[0]} 
-              className="w-20 h-20 rounded-xl object-cover border border-gray-100 flex-shrink-0" 
-              alt={product.title} 
-              referrerPolicy="no-referrer"
-            />
+          {/* Product row */}
+          <div className="flex gap-3 relative z-10">
+            {/* Image on left */}
+            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 relative">
+              <img 
+                src={product.media[0]} 
+                className="w-full h-full object-cover" 
+                alt={product.title} 
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute bottom-1 left-1 bg-black/75 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+                Sisa 2
+              </div>
+            </div>
+
+            {/* Content on right */}
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
-                <h3 className="text-xs font-bold text-gray-800 leading-snug line-clamp-2">{product.title}</h3>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedColor && (
-                    <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded font-medium">Color: {selectedColor}</span>
-                  )}
-                  {selectedStorage && (
-                    <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded font-medium">Variant: {selectedStorage}</span>
-                  )}
+                <h3 className="text-xs font-medium text-gray-800 leading-snug line-clamp-2">
+                  {product.title}
+                </h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {selectedStorage || '10'}
+                </p>
+                <div>
+                  <span className="inline-block border border-[#00AA5B]/20 bg-[#E8F8F0] text-[#00AA5B] rounded text-[10px] px-1.5 py-0.5 font-semibold mt-1">
+                    Gratis pengembalian
+                  </span>
                 </div>
               </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <span className="text-sm font-black text-gray-900">{formatCurrency(basePrice)}</span>
-                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
+
+              {/* Price & Quantity flex */}
+              <div className="flex items-end justify-between mt-2.5">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1 text-[#E02424]">
+                    <div className="bg-[#FFF0F2] text-[#E02424] p-0.5 rounded flex items-center justify-center">
+                      <Ticket className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-black text-[#E02424]">
+                      {formatCurrency(basePrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] text-gray-400 line-through">
+                      {formatCurrency(basePrice * 1.1)}
+                    </span>
+                    <span className="text-[10px] text-[#E02424] font-bold">
+                      9%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quantity selector matching image */}
+                <div className="flex items-center border border-gray-200 rounded-full bg-white px-1.5 py-0.5 shadow-sm">
                   <button 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-2.5 py-0.5 text-gray-500 font-bold hover:bg-gray-50 active:bg-gray-100 text-xs"
+                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 font-medium text-sm active:scale-90 transition-transform"
                   >
                     -
                   </button>
-                  <span className="px-2 text-xs font-bold text-gray-800 border-x border-gray-100">{quantity}</span>
+                  <span className="px-2 text-xs font-bold text-gray-800 min-w-[12px] text-center">
+                    {quantity}
+                  </span>
                   <button 
                     onClick={() => setQuantity(quantity + 1)}
-                    className="px-2.5 py-0.5 text-gray-500 font-bold hover:bg-gray-50 active:bg-gray-100 text-xs"
+                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 font-medium text-sm active:scale-90 transition-transform"
                   >
                     +
                   </button>
@@ -552,156 +532,193 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
           </div>
         </section>
 
-        <div className="h-[8px] bg-gray-50 border-y border-gray-100" />
-
-        {/* Shipping Selector Row */}
-        <section className="p-4 space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-400">Pilihan Pengiriman</h3>
-          
-          <button 
-            onClick={() => setActiveSheet('shipping')}
-            className="w-full flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 border border-gray-100 hover:border-gray-200 rounded-2xl transition text-left"
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-green-50 rounded-xl mt-0.5">
-                <Truck className="w-5 h-5 text-green-600" />
+        {/* Shipping Card Block */}
+        <section className="px-4 py-2">
+          <div className="border border-[#d9d9d9] rounded-xl p-3 bg-white shadow-sm">
+            {/* Non-clickable shipping selector area (Default Value) */}
+            <div 
+              className="flex items-center justify-between"
+            >
+              <div className="space-y-1 pr-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[#03A96B] font-extrabold italic tracking-tight text-[11px] bg-[#E8F8F0] px-1.5 py-0.5 rounded">
+                    GRATIS ONGKiR
+                  </span>
+                  <span className="text-xs font-bold text-gray-800">
+                    Standard (Rp146.000 <span className="line-through text-gray-400 font-normal">Rp266.000</span>)
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Estimasi tiba 17 - 21 Jul
+                </p>
               </div>
-              <div>
-                <p className="text-xs font-extrabold text-gray-800">{selectedShipping.provider} ({selectedShipping.name})</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{selectedShipping.eta}</p>
-                <p className="text-[10px] text-green-600 font-bold mt-1">Estimasi Ongkir: {selectedShipping.price === 0 ? 'Bebas Ongkir (Gratis)' : formatCurrency(selectedShipping.price)}</p>
+              <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 my-3" />
+
+            {/* Insurance Checkbox Row */}
+            <div 
+              onClick={() => setIsProtectionChecked(!isProtectionChecked)}
+              className="flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4.5 h-4.5 text-gray-400 shrink-0" />
+                <span className="text-xs text-gray-600">
+                  Pakai Asuransi Pengiriman <span className="text-gray-400 font-medium">(Rp81.600)</span>
+                </span>
+              </div>
+              
+              {/* Rounded-md custom checkbox matching image */}
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                isProtectionChecked 
+                  ? 'border-[#03A96B] bg-[#03A96B]' 
+                  : 'border-gray-300 bg-white'
+              }`}>
+                {isProtectionChecked && (
+                  <Check className="w-3.5 h-3.5 text-white stroke-[3.5]" />
+                )}
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </button>
+          </div>
         </section>
 
-        <div className="h-[8px] bg-gray-50 border-y border-gray-100" />
+        {/* Catatan Section */}
+        <section className="px-4 py-1.5 border-t border-gray-100 mt-2">
+          <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span className="text-xs font-semibold text-gray-500">Kasih Catatan</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+          </div>
+        </section>
 
-        {/* Protection Checkbox */}
-        <section className="p-4">
-          <label className="flex items-start gap-3 cursor-pointer p-3 bg-green-50/20 border border-green-100/50 rounded-2xl">
-            <input 
-              type="checkbox" 
-              checked={isProtectionChecked}
-              onChange={() => setIsProtectionChecked(!isProtectionChecked)}
-              className="mt-1 w-4 h-4 rounded text-green-600 focus:ring-green-500 border-gray-300 accent-green-600"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-green-600" />
-                <span className="text-xs font-bold text-gray-800">Proteksi Gadget & Produk</span>
-                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.2 rounded font-black uppercase text-right ml-auto">Rp {protectionPrice.toLocaleString('id-ID')}</span>
+        <div className="h-[8px] bg-[#F0F3F7] border-y border-gray-100 mt-1" />
+
+        {/* Promo Voucher Row (Non-clickable / Default Value) */}
+        <section 
+          className="p-4 flex items-center justify-between bg-white"
+        >
+          <div className="flex items-center gap-3">
+            {/* Promo coupon icon */}
+            <svg className="w-5 h-5 text-[#03A96B]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="bg-[#FFF0F2] text-[#D1105A] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#FFF0F2]">
+                -Rp1,2jt
+              </span>
+              <span className="bg-[#E8F8F0] text-[#00AA5B] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#E8F8F0]">
+                Gratis Ongkir
+              </span>
+              <span className="bg-[#FEF9E7] text-[#D4AC0D] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#FEF9E7]">
+                Bonus 250rb
+              </span>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+        </section>
+
+        <div className="h-[8px] bg-[#F0F3F7] border-y border-gray-100" />
+
+        {/* Pakai Bonus Row */}
+        <section className="p-4 flex items-center justify-between bg-white border-b border-gray-50">
+          <div className="flex items-start gap-3">
+            {/* Yellow bonus icon */}
+            <div className="w-5 h-5 bg-[#FFBC00] rounded flex items-center justify-center text-white shrink-0 mt-0.5 font-black text-[10px]">
+              ★
+            </div>
+            <div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-bold text-gray-500">Pakai Bonus</span>
+                <Info className="w-3.5 h-3.5 text-gray-300" />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
-                Melindungi penuh dari kerusakan tidak disengaja, retak layar, dan tumpahan cairan selama 12 bulan.
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Kamu tidak bisa pakai Bonus di pesanan ini
               </p>
             </div>
-          </label>
+          </div>
+          {/* Toggle Switch Off */}
+          <div className="w-10 h-5 bg-gray-200 rounded-full relative cursor-not-allowed opacity-60">
+            <div className="w-4 h-4 bg-white rounded-full absolute left-0.5 top-0.5 shadow-sm" />
+          </div>
         </section>
 
-        <div className="h-[8px] bg-gray-50 border-y border-gray-100" />
+        <div className="h-[8px] bg-[#F0F3F7] border-y border-gray-100" />
 
-        {/* Promo Voucher Banner */}
-        <section className="p-4">
-          <button 
-            onClick={() => setActiveSheet('promo')}
-            className={`w-full flex items-center justify-between p-4 border rounded-2xl transition text-left ${appliedPromo ? 'bg-green-50/40 border-green-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${appliedPromo ? 'bg-green-100 text-green-600 animate-pulse' : 'bg-gray-50 text-gray-500'}`}>
-                <Ticket className="w-5 h-5" />
-              </div>
-              <div>
-                <p className={`text-xs font-extrabold ${appliedPromo ? 'text-green-700' : 'text-gray-800'}`}>
-                  {appliedPromo ? `Promo Dipakai: ${appliedPromo.code}` : 'Makin hemat pakai promo'}
-                </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">
-                  {appliedPromo ? appliedPromo.desc : 'Pilih promo cashback & bebas ongkir'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              {appliedPromo && (
-                <span className="text-[10px] bg-green-500 text-white font-black px-2 py-0.5 rounded-full mr-1">Aktif</span>
-              )}
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          </button>
+        {/* Stok Sisa Warning Banner */}
+        <section className="bg-[#FFF8E7] px-4 py-2.5 flex items-center gap-2 border-y border-orange-100">
+          {/* Orange lightning icon */}
+          <svg className="w-4 h-4 text-[#FF8E25] shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <p className="text-[11px] text-[#C27800] font-bold">
+            Stok <span className="font-extrabold text-[#FF8E25]">sisa 2!</span> Segera bayar & dapat Gratis Ongkir
+          </p>
         </section>
 
-        <div className="h-[8px] bg-gray-50 border-y border-gray-100" />
-
-        {/* Rincian Pembayaran */}
-        <section className="p-4 space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-400">Rincian Pembayaran</h3>
-          
-          <div className="space-y-2.5 text-xs">
-            <div className="flex justify-between text-gray-600">
-              <span>Total Harga ({quantity} barang)</span>
-              <span className="font-semibold text-gray-800">{formatCurrency(totalProductPrice)}</span>
+        {/* Detailed Breakdown for high-fidelity support */}
+        <section className="p-4 bg-white text-xs border-t border-gray-100 space-y-2.5 pb-10">
+          <div className="flex justify-between text-gray-500">
+            <span>Total Harga ({quantity} barang)</span>
+            <span className="font-semibold">{formatCurrency(totalProductPrice)}</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>Total Ongkos Kirim</span>
+            <span className="font-semibold">{formatCurrency(shippingFee)}</span>
+          </div>
+          {promoDiscount > 0 && (
+            <div className="flex justify-between text-[#03A96B]">
+              <span>Diskon Ongkir / Promo</span>
+              <span className="font-semibold">-{formatCurrency(promoDiscount)}</span>
             </div>
-            <div className="flex justify-between text-gray-600">
-              <span>Total Ongkos Kirim</span>
-              <span className="font-semibold text-gray-800">{formatCurrency(shippingFee)}</span>
+          )}
+          {isProtectionChecked && (
+            <div className="flex justify-between text-gray-500">
+              <span>Asuransi / Proteksi</span>
+              <span className="font-semibold">{formatCurrency(protectionFee)}</span>
             </div>
-            
-            {promoDiscount > 0 && (
-              <div className="flex justify-between text-green-600 font-medium">
-                <span>Diskon Ongkos Kirim / Promo</span>
-                <span>-{formatCurrency(promoDiscount)}</span>
-              </div>
-            )}
-
-            {isProtectionChecked && (
-              <div className="flex justify-between text-gray-600">
-                <span>Biaya Proteksi Produk</span>
-                <span className="font-semibold text-gray-800">{formatCurrency(protectionFee)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-gray-600">
-              <span>Biaya Jasa Aplikasi</span>
-              <span className="font-semibold text-gray-800">{formatCurrency(appFee)}</span>
-            </div>
-
-            <div className="h-[1px] bg-gray-100 my-2" />
-
-            <div className="flex justify-between text-sm font-black text-gray-900 pt-1">
-              <span>Total Belanja</span>
-              <span className="text-green-600">{formatCurrency(grandTotal)}</span>
-            </div>
+          )}
+          <div className="flex justify-between text-gray-500">
+            <span>Biaya Jasa Aplikasi</span>
+            <span className="font-semibold">{formatCurrency(appFee)}</span>
+          </div>
+          <div className="border-t border-gray-100 pt-2 flex justify-between font-bold text-sm text-gray-900">
+            <span>Total Tagihan</span>
+            <span className="text-[#03A96B]">{formatCurrency(grandTotal)}</span>
           </div>
         </section>
 
       </main>
 
       {/* Floating Bottom Action Bar */}
-      <footer className="w-full bg-white border-t border-gray-100 px-4 py-3.5 z-40 flex items-center justify-between shrink-0 absolute bottom-0">
+      <footer className="w-full bg-white border-0 px-4 py-3 z-40 flex items-center justify-between shrink-0 absolute bottom-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <div className="flex flex-col">
           <span className="text-[10px] text-gray-500 font-medium">Total Tagihan</span>
-          <span className="text-base font-black text-green-600 leading-tight">{formatCurrency(grandTotal)}</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-base font-black text-gray-900 leading-none">
+              {formatCurrency(grandTotal)}
+            </span>
+            <span className="bg-[#FFF0F2] text-[#D1105A] p-0.5 rounded-full flex items-center justify-center w-4 h-4 text-[9px] font-bold">
+              %
+            </span>
+          </div>
+          <span className="text-[10px] text-[#D1105A] font-bold mt-1">
+            Kamu Hemat {formatCurrency(promoDiscount + 120000)}!
+          </span>
         </div>
-        {!address.name || !address.detail ? (
-          <button 
-            onClick={() => {
-              setTempAddress({ ...address });
-              setIsAddressFullscreen(true);
-            }}
-            className="bg-green-500 hover:bg-green-600 text-white font-black px-6 py-3 rounded-xl text-xs shadow-lg shadow-green-100 active:scale-[0.98] transition-all flex items-center gap-1.5"
-          >
-            Lengkapi Alamat
-            <ArrowRight className="w-4 h-4 animate-pulse" />
-          </button>
-        ) : (
-          <button 
-            onClick={() => setActiveSheet('payment')}
-            className="bg-green-500 hover:bg-green-600 text-white font-black px-6 py-3 rounded-xl text-xs shadow-lg shadow-green-100 active:scale-[0.98] transition-all flex items-center gap-1.5"
-          >
-            Pilih Pembayaran
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        )}
+
+        <button 
+          onClick={() => window.open(product.url || 'https://www.tokopedia.com', '_blank')}
+          className="bg-[#00AA5B] hover:bg-[#00904D] text-white font-extrabold px-6 py-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-green-100 transition-all active:scale-[0.98]"
+        >
+          <CheckCircle2 className="w-4 h-4 stroke-[3]" />
+          Bayar Sekarang
+        </button>
       </footer>
 
       {/* BOTTOM SHEET INTERACTIVE MODAL COMPONENT */}
