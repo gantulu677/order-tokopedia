@@ -217,7 +217,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   };
 
   const shippingOptions: ShippingOption[] = [
-    { id: 'standard', name: 'Standard', provider: 'Standard', price: 146000, eta: 'Estimasi tiba 17 - 21 Jul', description: 'Promo Bebas Ongkir' },
+    { id: 'standard', name: 'Standard', provider: 'Standard', price: 0, eta: 'Estimasi tiba 17 - 21 Jul', description: 'Promo Bebas Ongkir' },
     { id: 'reg', name: 'Reguler', provider: 'JNE Reguler', price: 12000, eta: 'Tiba 15 - 16 Jul', description: 'Paling sering dipilih' },
     { id: 'inst', name: 'Instan (3 Jam)', provider: 'GoSend Instant', price: 28000, eta: 'Tiba dalam 3 jam', description: 'Pengiriman super cepat' },
     { id: 'sd', name: 'Sameday', provider: 'Grab Sameday', price: 19000, eta: 'Tiba hari ini sebelum 18:00', description: 'Tiba di hari yang sama' },
@@ -232,8 +232,8 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   ];
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
 
-  const [isProtectionChecked, setIsProtectionChecked] = useState(true);
-  const protectionPrice = 81600;
+  const [isProtectionChecked, setIsProtectionChecked] = useState(false);
+  const protectionPrice = 6500;
 
   // Payment states
   const [selectedPayment, setSelectedPayment] = useState({
@@ -312,7 +312,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
     }
   }
 
-  const appFee = 1000;
+  const appFee = 0;
   const protectionFee = isProtectionChecked ? protectionPrice * quantity : 0;
   const grandTotal = totalProductPrice + shippingFee - promoDiscount + appFee + protectionFee;
 
@@ -545,7 +545,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
                     GRATIS ONGKiR
                   </span>
                   <span className="text-xs font-bold text-gray-800">
-                    Standard (Rp146.000 <span className="line-through text-gray-400 font-normal">Rp266.000</span>)
+                    Standard (Rp0 <span className="line-through text-gray-400 font-normal">Rp77.000</span>)
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-400">
@@ -566,7 +566,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4.5 h-4.5 text-gray-400 shrink-0" />
                 <span className="text-xs text-gray-600">
-                  Pakai Asuransi Pengiriman <span className="text-gray-400 font-medium">(Rp81.600)</span>
+                  Pakai Asuransi Pengiriman <span className="text-gray-400 font-medium">(Rp6.500)</span>
                 </span>
               </div>
               
@@ -677,15 +677,9 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
               <span className="font-semibold">-{formatCurrency(promoDiscount)}</span>
             </div>
           )}
-          {isProtectionChecked && (
-            <div className="flex justify-between text-gray-500">
-              <span>Asuransi / Proteksi</span>
-              <span className="font-semibold">{formatCurrency(protectionFee)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-gray-500">
-            <span>Biaya Jasa Aplikasi</span>
-            <span className="font-semibold">{formatCurrency(appFee)}</span>
+            <span>Asuransi / Proteksi</span>
+            <span className="font-semibold">{formatCurrency(protectionFee)}</span>
           </div>
           <div className="border-t border-gray-100 pt-2 flex justify-between font-bold text-sm text-gray-900">
             <span>Total Tagihan</span>
