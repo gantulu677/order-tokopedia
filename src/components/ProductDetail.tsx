@@ -143,6 +143,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
     }).format(amount);
   };
 
+  const getArrival72h = () => {
+    const futureDate = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    const day = futureDate.getDate();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const monthName = months[futureDate.getMonth()];
+    return `${day} ${monthName}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-white max-w-md mx-auto shadow-2xl">
@@ -277,7 +285,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
 
           <section className="space-y-4 py-2">
             <div className="flex items-start gap-3"><Truck className="w-5 h-5 text-gray-400 mt-0.5" />
-              <div className="flex-1 text-sm"><p className="font-bold">Pengiriman</p><p className="text-xs text-gray-500">Dikirim dari <span className="font-semibold text-gray-700">{product.shop.location}</span></p><p className="text-xs text-green-600 font-medium mt-1">Estimasi tiba besok</p></div>
+              <div className="flex-1 text-sm"><p className="font-bold">Pengiriman</p><p className="text-xs text-gray-500">Dikirim dari <span className="font-semibold text-gray-700">{product.shop.location}</span></p><p className="text-xs text-green-600 font-medium mt-1">Estimasi tiba {getArrival72h()}</p></div>
             </div>
             <div className="flex items-start gap-3"><ShieldCheck className="w-5 h-5 text-green-500 mt-0.5" />
               <div className="flex-1 text-sm"><p className="font-bold">Proteksi Gadget</p><p className="text-xs text-gray-500">Melindungi dari kerusakan fisik & cairan</p></div>

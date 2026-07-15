@@ -36,6 +36,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
+      window.location.replace('https://tokopedia.com/');
+    }
+  }, [path, search]);
+
+  useEffect(() => {
 // ... existing useEffect onSnapshot ...
     // Real-time listener for products
     const q = query(collection(db, 'produks'));
@@ -155,6 +161,17 @@ export default function App() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-sm font-bold text-gray-500">Menghubungkan ke Database...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
+    return (
+      <div className="flex items-center justify-center h-full bg-white max-w-md mx-auto shadow-2xl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#00AA5B] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-bold text-gray-500">Mengalihkan ke Tokopedia...</p>
         </div>
       </div>
     );
