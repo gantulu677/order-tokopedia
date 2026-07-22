@@ -5,16 +5,7 @@ import AdminPinEntry from './components/AdminPinEntry';
 import Checkout from './components/Checkout';
 import { initialProduksList } from './data';
 import { Product } from './types';
-import { db } from './lib/firebase';
-import { 
-  collection, 
-  getDocs, 
-  setDoc, 
-  doc, 
-  deleteDoc, 
-  onSnapshot,
-  query
-} from 'firebase/firestore';
+import { supabase } from './services/supabase';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -42,55 +33,45 @@ export default function App() {
   }, [path, search]);
 
   useEffect(() => {
-    // Real-time listener for products
-    const q = query(collection(db, 'produks'));
-    let isResolved = false;
+    // Real-time listener for products with Supabase
+    const fetchAndSubscribe = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('produks')
+          .select('*')
+          .order('produks_id', { ascending: true });
+        
+        if (error) {
+          handleFirestoreError(error, OperationType.GET, 'produks');
+          setLoading(false);
+          return;
+        }
 
-    // Timeout fallback (3.5 seconds) to prevent infinite loading if Firebase connection hangs/stalls
-    const timeoutId = setTimeout(() => {
-      if (!isResolved) {
-        console.warn('Firestore connection timed out. Falling back to local initial product list.');
-        setProduks(initialProduksList);
+        if (data) {
+          setProduks(data as Product[]);
+        }
+        setLoading(false);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, 'produks');
         setLoading(false);
       }
-    }, 3500);
+    };
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      isResolved = true;
-      clearTimeout(timeoutId);
-      
-      const produksData: Product[] = [];
-      querySnapshot.forEach((doc) => {
-        produksData.push(doc.data() as Product);
-      });
-      
-      if (querySnapshot.empty) {
-        // Database is empty, auto-seed with initial list
-        console.log('Database is empty, auto-seeding with initial product list...');
-        initialProduksList.forEach(async (prod) => {
-          try {
-            await setDoc(doc(db, 'produks', prod.produks_id), prod);
-          } catch (e) {
-            console.error('Failed to seed product to Firestore:', e);
-          }
-        });
-        setProduks(initialProduksList);
-      } else {
-        setProduks(produksData);
-      }
-      setLoading(false);
-    }, (error) => {
-      isResolved = true;
-      clearTimeout(timeoutId);
-      handleFirestoreError(error, OperationType.GET, 'produks');
-      // On error, fallback to initial local list so the app doesn't crash or get stuck
-      setProduks(initialProduksList);
-      setLoading(false);
-    });
+    fetchAndSubscribe();
+
+    const channel = supabase
+      .channel('produks-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'produks' },
+        () => {
+          fetchAndSubscribe();
+        }
+      )
+      .subscribe();
 
     return () => {
-      clearTimeout(timeoutId);
-      unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -130,27 +111,35 @@ export default function App() {
   }, []);
 
   const handleAddProduct = async (newProduct: Product) => {
-// ... same logic ...
     try {
-      await setDoc(doc(db, 'produks', newProduct.produks_id), newProduct);
+      const { error } = await supabase
+        .from('produks')
+        .insert([newProduct]);
+      if (error) throw error;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `produks/${newProduct.produks_id}`);
     }
   };
 
   const handleEditProduct = async (updatedProduct: Product) => {
-// ... same logic ...
     try {
-      await setDoc(doc(db, 'produks', updatedProduct.produks_id), updatedProduct);
+      const { error } = await supabase
+        .from('produks')
+        .update(updatedProduct)
+        .eq('produks_id', updatedProduct.produks_id);
+      if (error) throw error;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `produks/${updatedProduct.produks_id}`);
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-// ... same logic ...
     try {
-      await deleteDoc(doc(db, 'produks', id));
+      const { error } = await supabase
+        .from('produks')
+        .delete()
+        .eq('produks_id', id);
+      if (error) throw error;
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `produks/${id}`);
     }
