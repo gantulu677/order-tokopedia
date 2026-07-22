@@ -499,14 +499,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
                       {formatCurrency(basePrice)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-gray-400 line-through">
-                      {formatCurrency(basePrice * 1.1)}
-                    </span>
-                    <span className="text-[10px] text-[#E02424] font-bold">
-                      9%
-                    </span>
-                  </div>
+
                 </div>
 
                 {/* Quantity selector matching image */}
@@ -609,14 +602,8 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="bg-[#FFF0F2] text-[#D1105A] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#FFF0F2]">
-                -Rp1,2jt
-              </span>
               <span className="bg-[#E8F8F0] text-[#00AA5B] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#E8F8F0]">
                 Gratis Ongkir
-              </span>
-              <span className="bg-[#FEF9E7] text-[#D4AC0D] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#FEF9E7]">
-                Bonus 250rb
               </span>
             </div>
           </div>
@@ -697,13 +684,12 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
             <span className="text-base font-black text-gray-900 leading-none">
               {formatCurrency(grandTotal)}
             </span>
-            <span className="bg-[#FFF0F2] text-[#D1105A] p-0.5 rounded-full flex items-center justify-center w-4 h-4 text-[9px] font-bold">
-              %
-            </span>
           </div>
-          <span className="text-[10px] text-[#D1105A] font-bold mt-1">
-            Kamu Hemat {formatCurrency(promoDiscount + 120000)}!
-          </span>
+          {promoDiscount > 0 && (
+            <span className="text-[10px] text-[#D1105A] font-bold mt-1">
+              Kamu Hemat {formatCurrency(promoDiscount)}!
+            </span>
+          )}
         </div>
 
         <button 
