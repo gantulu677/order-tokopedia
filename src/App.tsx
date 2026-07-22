@@ -5,7 +5,7 @@ import AdminPinEntry from './components/AdminPinEntry';
 import Checkout from './components/Checkout';
 import { initialProduksList } from './data';
 import { Product } from './types';
-import { supabase } from './services/supabase';
+import { supabase } from './lib/supabase';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -32,40 +32,34 @@ export default function App() {
     }
   }, [path, search]);
 
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('produks')
+        .select('*');
+      if (error) throw error;
+      setProduks(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Real-time listener for products with Supabase
-    const fetchAndSubscribe = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('produks')
-          .select('*')
-          .order('produks_id', { ascending: true });
-        
-        if (error) {
-          handleFirestoreError(error, OperationType.GET, 'produks');
-          setLoading(false);
-          return;
-        }
-
-        if (data) {
-          setProduks(data as Product[]);
-        }
-        setLoading(false);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, 'produks');
-        setLoading(false);
-      }
-    };
-
-    fetchAndSubscribe();
+    fetchProducts();
 
     const channel = supabase
-      .channel('produks-changes')
+      .channel('schema-db-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'produks' },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'produks'
+        },
         () => {
-          fetchAndSubscribe();
+          fetchProducts();
         }
       )
       .subscribe();
@@ -116,8 +110,9 @@ export default function App() {
         .from('produks')
         .insert([newProduct]);
       if (error) throw error;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `produks/${newProduct.produks_id}`);
+    } catch (error: any) {
+      console.error('Error adding product:', error);
+      alert('Gagal menambah produk: ' + (error?.message || error));
     }
   };
 
@@ -128,8 +123,9 @@ export default function App() {
         .update(updatedProduct)
         .eq('produks_id', updatedProduct.produks_id);
       if (error) throw error;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `produks/${updatedProduct.produks_id}`);
+    } catch (error: any) {
+      console.error('Error editing product:', error);
+      alert('Gagal mengubah produk: ' + (error?.message || error));
     }
   };
 
@@ -140,8 +136,9 @@ export default function App() {
         .delete()
         .eq('produks_id', id);
       if (error) throw error;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `produks/${id}`);
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      alert('Gagal menghapus produk: ' + (error?.message || error));
     }
   };
 
@@ -149,32 +146,6 @@ export default function App() {
     setIsAdminAuthorized(true);
     sessionStorage.setItem('adminAuthorized', 'true');
   };
-
-  enum OperationType {
-// ... existing OperationType ...
-    CREATE = 'create',
-    UPDATE = 'update',
-    DELETE = 'delete',
-    LIST = 'list',
-    GET = 'get',
-    WRITE = 'write',
-  }
-
-  function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-// ... existing handleFirestoreError ...
-    const errInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      authInfo: {
-        userId: null, // No auth as requested
-        email: null,
-      },
-      operationType,
-      path
-    };
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
-    // Don't throw for list operations to keep the UI alive during initial permission setup
-    if (operationType !== OperationType.GET) throw new Error(JSON.stringify(errInfo));
-  }
 
   if (loading) {
 // ... existing loading UI ...
@@ -209,6 +180,7 @@ export default function App() {
         onAdd={handleAddProduct}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
+        onRefresh={fetchProducts}
       />
     );
   }

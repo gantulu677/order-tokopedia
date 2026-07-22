@@ -13,6 +13,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Product, ColorVariant, StorageVariant } from '../types';
+import { initialProduksList } from '../data';
 
 const generateProdukId = () => {
   const chars = 'asdf0123456789';
@@ -31,12 +32,57 @@ interface AdminDashboardProps {
   onAdd: (product: Product) => void;
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
+  onRefresh?: () => Promise<void>;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ produks, onAdd, onEdit, onDelete }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  produks, 
+  onAdd, 
+  onEdit, 
+  onDelete,
+  onRefresh 
+}) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({});
+  const [seeding, setSeeding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      try {
+        await onRefresh();
+      } catch (error) {
+        console.error("Failed to refresh products:", error);
+      } finally {
+        setRefreshing(false);
+      }
+    }
+  };
+
+  const handleSeedMocks = async () => {
+    setSeeding(true);
+    try {
+      let count = 0;
+      for (const p of initialProduksList) {
+        if (!produks.some(existing => existing.produks_id === p.produks_id)) {
+          await onAdd(p);
+          count++;
+        }
+      }
+      if (count > 0) {
+        alert(`Berhasil menambahkan ${count} produk contoh ke database!`);
+      } else {
+        alert("Semua produk contoh sudah ada di database.");
+      }
+    } catch (error) {
+      console.error("Failed to seed mocks:", error);
+      alert("Gagal memuat produk contoh");
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const emptyProduct: Product = {
     produks_id: '',
@@ -351,9 +397,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ produks, onAdd, onEdit,
           </button>
           <h1 className="text-xl font-black text-gray-900 tracking-tight">Katalog Admin</h1>
         </div>
-        <button onClick={handleAddNew} className="p-2.5 bg-green-500 text-white rounded-full shadow-lg shadow-green-100">
-          <Plus size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-95 disabled:opacity-50 rounded-xl text-xs font-bold text-[#00AA5B] transition"
+            title="Refresh daftar produk"
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            {refreshing ? 'Refreshing...' : 'Refresh Produk'}
+          </button>
+          <button onClick={handleAddNew} className="p-2.5 bg-green-500 text-white rounded-full shadow-lg shadow-green-100 active:scale-95 transition">
+            <Plus size={20} />
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 p-4 space-y-4 overflow-y-auto no-scrollbar">
@@ -395,9 +452,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ produks, onAdd, onEdit,
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
               <Package size={40} className="text-gray-300" />
             </div>
-            <div>
+            <div className="flex flex-col items-center gap-1">
               <p className="font-bold text-gray-900">Belum ada produk</p>
-              <p className="text-sm text-gray-500">Klik tombol + untuk menambah produk baru</p>
+              <p className="text-sm text-gray-500 mb-3">Tambahkan produk baru atau refresh daftar produk</p>
+              <button 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="px-5 py-2.5 bg-[#00AA5B] hover:bg-[#009650] text-white font-bold text-sm rounded-xl shadow-lg shadow-green-100 active:scale-95 disabled:opacity-50 transition flex items-center gap-2"
+              >
+                <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+                {refreshing ? 'Refreshing...' : 'Refresh Produk'}
+              </button>
             </div>
           </div>
         )}
