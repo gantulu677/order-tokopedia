@@ -42,23 +42,56 @@ export default function App() {
   }, [path, search]);
 
   useEffect(() => {
-// ... existing useEffect onSnapshot ...
     // Real-time listener for products
     const q = query(collection(db, 'produks'));
+    let isResolved = false;
+
+    // Timeout fallback (3.5 seconds) to prevent infinite loading if Firebase connection hangs/stalls
+    const timeoutId = setTimeout(() => {
+      if (!isResolved) {
+        console.warn('Firestore connection timed out. Falling back to local initial product list.');
+        setProduks(initialProduksList);
+        setLoading(false);
+      }
+    }, 3500);
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      isResolved = true;
+      clearTimeout(timeoutId);
+      
       const produksData: Product[] = [];
       querySnapshot.forEach((doc) => {
         produksData.push(doc.data() as Product);
       });
       
-      setProduks(produksData);
+      if (querySnapshot.empty) {
+        // Database is empty, auto-seed with initial list
+        console.log('Database is empty, auto-seeding with initial product list...');
+        initialProduksList.forEach(async (prod) => {
+          try {
+            await setDoc(doc(db, 'produks', prod.produks_id), prod);
+          } catch (e) {
+            console.error('Failed to seed product to Firestore:', e);
+          }
+        });
+        setProduks(initialProduksList);
+      } else {
+        setProduks(produksData);
+      }
       setLoading(false);
     }, (error) => {
+      isResolved = true;
+      clearTimeout(timeoutId);
       handleFirestoreError(error, OperationType.GET, 'produks');
+      // On error, fallback to initial local list so the app doesn't crash or get stuck
+      setProduks(initialProduksList);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
