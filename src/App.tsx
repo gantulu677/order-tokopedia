@@ -223,29 +223,21 @@ export default function App() {
   }
 
   if (path === '/admin') {
-    if (!adminUser) {
-      // Re-fetch products when a new admin logs in, to dynamically populate URLs if superadmin
-      return (
-        <AdminPinEntry 
-          onSuccess={(user) => {
-            setAdminUser(user);
-            fetchProducts();
-          }} 
-        />
-      );
-    }
+    const defaultSuperAdmin = {
+      id: "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
+      username: "superadmin",
+      name: "Super Admin",
+      role: 'super_admin' as const
+    };
     return (
       <AdminDashboard 
         produks={produks} 
-        user={adminUser}
+        user={adminUser || defaultSuperAdmin}
         onAdd={handleAddProduct}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onRefresh={fetchProducts}
-        onLogout={() => {
-          setAdminUser(null);
-          fetchProducts();
-        }}
+        onLogout={() => {}}
       />
     );
   }

@@ -581,14 +581,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
               </button>
-              
-              <button 
-                onClick={handleLogout} 
-                className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition"
-                title="Logout"
-              >
-                <LogOut size={15} />
-              </button>
             </div>
           </div>
 
