@@ -52,6 +52,14 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser("super-secret-tokped-key"));
 
+// Normalize Vercel stripped routing path prefix for Express serverless function compatibility
+app.use((req, res, next) => {
+  if (!req.url.startsWith("/api")) {
+    req.url = `/api${req.url}`;
+  }
+  next();
+});
+
 const PORT = 3000;
 
 interface AdminSession {
