@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
-import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = 'https://jvqrturbkgyxsycdcfwp.supabase.co';
@@ -49,6 +48,7 @@ async function syncAdminCredentials() {
 syncAdminCredentials();
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser("super-secret-tokped-key"));
 
@@ -372,6 +372,7 @@ app.post("/api/produks/transition", async (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
