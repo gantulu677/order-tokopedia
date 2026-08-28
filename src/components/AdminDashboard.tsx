@@ -6,15 +6,17 @@ import {
   Save, 
   X, 
   Package, 
-  Store, 
   Image as ImageIcon,
   ChevronLeft,
   ExternalLink,
+  LogOut,
   RefreshCw,
-  Lock,
-  Delete
+  Star,
+  MapPin,
+  TrendingUp,
+  Store
 } from 'lucide-react';
-import { Product, ColorVariant, StorageVariant } from '../types';
+import { Product } from '../types';
 import { initialProduksList } from '../data';
 
 const generateProdukId = () => {
@@ -35,6 +37,8 @@ interface AdminDashboardProps {
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  user: { id: string; username: string; name: string; role: 'admin' | 'super_admin' };
+  onLogout: () => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -42,43 +46,102 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onAdd, 
   onEdit, 
   onDelete,
-  onRefresh 
+  onRefresh,
+  user,
+  onLogout
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [seeding, setSeeding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [transitioningId, setTransitioningId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const [pin, setPin] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [pinError, setPinError] = useState<string | null>(null);
+  const formatRupiah = (num: number) => {
+    return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
 
-  const handleNumClick = (num: string) => {
-    if (pin.length >= 6) return;
-    setPinError(null);
-    const newPin = pin + num;
-    setPin(newPin);
-
-    if (newPin.length === 6) {
-      if (newPin === '677677') {
-        setIsAuthenticated(true);
-        setPin('');
-      } else {
-        setPinError('PIN salah, silakan coba lagi');
-        setPin('');
+  const handleCopyUrl = (p: Product) => {
+    // If we have p.url and the user is super_admin, we can copy that; otherwise always copy the mirror URL
+    const urlToCopy = (user.role === 'super_admin' && p.url) ? p.url : `${window.location.origin}/?produks_id=${p.produks_id}`;
+    navigator.clipboard.writeText(urlToCopy).then(() => {
+      setCopiedId(p.produks_id);
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy URL:', err);
+      // Fallback
+      const textArea = document.createElement("textarea");
+      textArea.value = urlToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedId(p.produks_id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (fallbackErr) {
+        alert('Gagal menyalin URL');
       }
+      document.body.removeChild(textArea);
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      const storedSession = sessionStorage.getItem('tokped_admin_session');
+      const headers: Record<string, string> = {};
+      if (storedSession) {
+        headers['X-Admin-Session'] = storedSession;
+      }
+      const res = await fetch('/api/auth/logout', { 
+        method: 'POST',
+        headers
+      });
+      if (res.ok) {
+        sessionStorage.removeItem('tokped_admin_session');
+        onLogout();
+      }
+    } catch (err) {
+      console.error('Failed to logout:', err);
     }
   };
 
-  const handleBackspace = () => {
-    setPinError(null);
-    setPin(prev => prev.slice(0, -1));
-  };
+  const handleTransition = async (produks_id: string, next_status: 'pending' | 'ready' | 'done') => {
+    setTransitioningId(produks_id);
+    try {
+      const storedSession = sessionStorage.getItem('tokped_admin_session');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (storedSession) {
+        headers['X-Admin-Session'] = storedSession;
+      } else if (user) {
+        headers['X-Admin-Session'] = JSON.stringify(user);
+      }
 
-  const handleClear = () => {
-    setPinError(null);
-    setPin('');
+      const res = await fetch('/api/produks/transition', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ produks_id, next_status }),
+      });
+
+      if (res.ok) {
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'Gagal mengubah status');
+      }
+    } catch (error) {
+      console.error('Error transitioning status:', error);
+      alert('Gagal mengubah status: Kesalahan koneksi');
+    } finally {
+      setTransitioningId(null);
+    }
   };
 
   const handleRefresh = async () => {
@@ -106,6 +169,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
       if (count > 0) {
         alert(`Berhasil menambahkan ${count} produk contoh ke database!`);
+        if (onRefresh) await onRefresh();
       } else {
         alert("Semua produk contoh sudah ada di database.");
       }
@@ -154,8 +218,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setEditingId(null);
   };
 
-  const [uploading, setUploading] = useState(false);
-
   const compressAndConvertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -193,13 +255,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             resolve(event.target?.result as string);
           }
         };
-        img.onerror = (err) => {
-          reject(err);
-        };
+        img.onerror = (err) => reject(err);
       };
-      reader.onerror = (err) => {
-        reject(err);
-      };
+      reader.onerror = (err) => reject(err);
     });
   };
 
@@ -237,7 +295,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     } finally {
       setUploading(false);
-      // Reset input
       e.target.value = '';
     }
   };
@@ -278,15 +335,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const updateNestedField = (parent: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [parent]: { ...(prev as any)[parent], [field]: value }
-    }));
-  };
+  let content;
 
   if (editingId || isAdding) {
-    return (
+    content = (
       <div className="w-full h-full flex flex-col bg-[#F8FAFC] relative overflow-hidden">
         {/* Sticky Header */}
         <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
@@ -296,208 +348,196 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <ChevronLeft size={20} className="stroke-[2.5]" />
           </button>
-          <div className="flex flex-col">
-            <h1 className="text-base font-black text-gray-900 tracking-tight">
-              {isAdding ? 'Tambah Produk Baru' : 'Ubah Detail Produk'}
+          <div>
+            <h1 className="text-base font-black text-gray-900 tracking-tight leading-none mb-1">
+              {isAdding ? "Tambah Produk" : "Edit Produk"}
             </h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              {isAdding ? 'Buat item katalog baru' : `ID: ${formData.produks_id || '-'}`}
-            </p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Formulir Produk</p>
           </div>
         </header>
 
-        {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar">
-          {/* Card 1: Informasi Utama */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
-              <span className="w-1 h-4 bg-[#00AA5B] rounded-full"></span>
-              <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Informasi Utama</h2>
-            </div>
+        {/* Form Fields */}
+        <div className="flex-1 overflow-y-auto px-4 pt-5 pb-24 space-y-6 no-scrollbar">
+          {/* Main Info */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm space-y-4">
+            <h2 className="text-[11px] font-black text-green-600 uppercase tracking-widest border-b border-green-50 pb-2 mb-2">Informasi Utama</h2>
             
-            <div className="space-y-4">
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">ID Produk (Unik)</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={formData.produks_id || ''} 
-                    onChange={e => updateField('produks_id', e.target.value.replace(/[^asdf0123456789]/g, '').slice(0, 8))}
-                    className="flex-1 bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono tracking-wider font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                    placeholder="a1s2d3f4"
-                    maxLength={8}
-                  />
-                  <button 
-                    onClick={() => updateField('produks_id', generateProdukId())}
-                    className="p-3 bg-green-50 text-[#00AA5B] rounded-xl hover:bg-green-100 transition-all active:scale-95 border border-green-100 flex items-center justify-center shrink-0"
-                    title="Generate ID Baru"
-                  >
-                    <RefreshCw size={18} />
-                  </button>
-                </div>
-              </div>
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Nama Produk</label>
+              <input 
+                type="text" 
+                value={formData.title || ''} 
+                onChange={e => updateField('title', e.target.value)}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                placeholder="Contoh: iPhone 14 Pro Max 256GB"
+              />
+            </div>
 
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Judul Produk</label>
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Brand</label>
                 <input 
                   type="text" 
-                  value={formData.title || ''} 
-                  onChange={e => updateField('title', e.target.value)}
+                  value={formData.brand || ''} 
+                  onChange={e => updateField('brand', e.target.value)}
                   className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                  placeholder="Masukkan judul lengkap produk"
+                  placeholder="Apple"
                 />
               </div>
-
-              <input type="hidden" value={formData.price !== undefined ? formData.price : 0} />
-              <input type="hidden" value={formData.stock_total !== undefined ? formData.stock_total : 1} />
-              <input type="hidden" value={formData.stock_sold !== undefined ? formData.stock_sold : 0} />
-
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Harga Jual</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">Rp</span>
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    value={formData.sale_price ? Number(formData.sale_price).toLocaleString('id-ID') : ''} 
-                    onChange={e => {
-                      const clean = e.target.value.replace(/\D/g, '');
-                      updateField('sale_price', clean ? Number(clean) : 0);
-                    }}
-                    className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl pl-10 pr-4 py-3 text-sm font-black text-[#00AA5B] outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                    placeholder="Contoh: 150.000"
-                  />
-                </div>
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Kategori</label>
+                <select 
+                  value={formData.category || 'Elektronik'} 
+                  onChange={e => updateField('category', e.target.value)}
+                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                >
+                  <option value="Elektronik">Elektronik</option>
+                  <option value="Fashion">Fashion</option>
+                  <option value="Kecantikan">Kecantikan</option>
+                  <option value="Rumah Tangga">Rumah Tangga</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
               </div>
+            </div>
 
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Deskripsi Produk</label>
+              <textarea 
+                value={formData.description || ''} 
+                onChange={e => updateField('description', e.target.value)}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200 min-h-[100px] resize-none"
+                placeholder="Tulis spesifikasi lengkap..."
+              />
+            </div>
+          </div>
+
+          {/* Pricing & Stock */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm space-y-4">
+            <h2 className="text-[11px] font-black text-green-600 uppercase tracking-widest border-b border-green-50 pb-2 mb-2">Harga & Persediaan</h2>
+            
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Harga Jual (Rp)</label>
+              <input 
+                type="number" 
+                value={formData.sale_price || ''} 
+                onChange={e => updateField('sale_price', Number(e.target.value))}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Deskripsi Produk</label>
-                <textarea 
-                  rows={4}
-                  value={formData.description || ''} 
-                  onChange={e => updateField('description', e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200 resize-none"
-                  placeholder="Tulis spesifikasi lengkap dan keunggulan produk..."
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Stok Total</label>
+                <input 
+                  type="number" 
+                  value={formData.stock_total !== undefined ? formData.stock_total : ''} 
+                  onChange={e => updateField('stock_total', Number(e.target.value))}
+                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                  placeholder="1"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Terjual</label>
+                <input 
+                  type="number" 
+                  value={formData.stock_sold !== undefined ? formData.stock_sold : ''} 
+                  onChange={e => updateField('stock_sold', Number(e.target.value))}
+                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                  placeholder="0"
                 />
               </div>
             </div>
           </div>
 
-          {/* Card 2: Media & Gambar */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
-              <span className="w-1 h-4 bg-[#00AA5B] rounded-full"></span>
-              <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Media & Gambar</h2>
-            </div>
-
+          {/* Media Uploder */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm space-y-4">
+            <h2 className="text-[11px] font-black text-green-600 uppercase tracking-widest border-b border-green-50 pb-2 mb-2">Media & Gambar</h2>
+            
             <div className="space-y-3">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Daftar URL Gambar</label>
-              <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Daftar Link Gambar (Satu per baris)</label>
+              
+              <div className="grid grid-cols-4 gap-2">
                 {(formData.media || []).map((url, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
-                      {url ? (
+                  <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100 relative group flex items-center justify-center">
+                    {url ? (
+                      <>
                         <img src={url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
-                          <ImageIcon size={16} />
-                        </div>
-                      )}
-                    </div>
-                    <input 
-                      type="text" 
-                      value={url} 
-                      onChange={e => {
-                        const newMedia = [...(formData.media || [])];
-                        newMedia[idx] = e.target.value;
-                        updateField('media', newMedia);
-                      }}
-                      className="flex-1 bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#00AA5B] transition-all"
-                      placeholder="Masukkan URL Gambar"
-                    />
-                    <button 
-                      onClick={() => {
-                        const newMedia = (formData.media || []).filter((_, i) => i !== idx);
-                        updateField('media', newMedia);
-                      }} 
-                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition"
-                    >
-                      <Trash2 size={16}/>
-                    </button>
+                        <button 
+                          onClick={() => {
+                            const nextMedia = [...(formData.media || [])];
+                            nextMedia.splice(idx, 1);
+                            updateField('media', nextMedia);
+                          }}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                        >
+                          <X size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <ImageIcon size={20} className="text-gray-300" />
+                    )}
                   </div>
                 ))}
                 
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <label className={`cursor-pointer py-3 border border-dashed rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all ${uploading ? 'bg-gray-50 border-gray-200 text-gray-400' : 'border-[#00AA5B]/30 hover:border-[#00AA5B] text-[#00AA5B] bg-green-50/30 hover:bg-green-50'}`}>
-                    <ImageIcon size={14} /> 
-                    {uploading ? 'Mengunggah...' : 'Upload File'}
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                    />
-                  </label>
-                  <button 
-                    onClick={() => updateField('media', [...(formData.media || []), ''])}
-                    className="py-3 border border-dashed border-gray-200 rounded-xl text-gray-400 text-xs font-black flex items-center justify-center gap-2 hover:bg-gray-50 hover:text-gray-600 transition-all"
-                  >
-                    <Plus size={14} /> Tambah URL
-                  </button>
-                </div>
+                <label className={`aspect-square rounded-xl border border-dashed border-gray-200 hover:border-green-500 cursor-pointer flex flex-col items-center justify-center text-gray-400 hover:text-green-600 transition-all ${uploading ? 'animate-pulse pointer-events-none' : ''}`}>
+                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                  <Plus size={20} className={uploading ? 'animate-spin' : ''} />
+                  <span className="text-[8px] font-bold uppercase tracking-wider mt-1">{uploading ? 'Proses' : 'Upload'}</span>
+                </label>
               </div>
+
+              <textarea 
+                value={(formData.media || []).join('\n')} 
+                onChange={e => updateField('media', e.target.value.split('\n'))}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-mono text-gray-600 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200 min-h-[80px]"
+                placeholder="Atau tempel link gambar di sini..."
+              />
             </div>
           </div>
 
-          {/* Card 3: Informasi Toko */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
-              <span className="w-1 h-4 bg-[#00AA5B] rounded-full"></span>
-              <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Informasi Toko</h2>
+          {/* Shop Information */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100/80 shadow-sm space-y-4">
+            <h2 className="text-[11px] font-black text-green-600 uppercase tracking-widest border-b border-green-50 pb-2 mb-2">Informasi Toko</h2>
+            
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Nama Toko Resmi</label>
+              <input 
+                type="text" 
+                value={formData.shop_name || ''} 
+                onChange={e => updateField('shop_name', e.target.value)}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                placeholder="Nama Toko Resmi"
+              />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Nama Toko</label>
-                <input 
-                  type="text" 
-                  value={formData.shop_name || ''} 
-                  onChange={e => updateField('shop_name', e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                  placeholder="Nama Toko Resmi"
-                />
-              </div>
+            <div>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Lokasi Toko</label>
+              <input 
+                type="text" 
+                value={formData.shop_location || ''} 
+                onChange={e => updateField('shop_location', e.target.value)}
+                className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                placeholder="Lokasi pengiriman (Contoh: Jakarta Barat)"
+              />
+            </div>
 
+            {user.role === 'super_admin' && (
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Lokasi Toko</label>
-                <input 
-                  type="text" 
-                  value={formData.shop_location || ''} 
-                  onChange={e => updateField('shop_location', e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                  placeholder="Lokasi pengiriman (Contoh: Jakarta Barat)"
-                />
-              </div>
-
-              <input type="hidden" value={formData.shop_rating !== undefined ? formData.shop_rating : 4.9} />
-              <input type="hidden" value={formData.reviews_average !== undefined ? formData.reviews_average : 5} />
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">URL Produk (Tokopedia)</label>
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">URL Produk (Hanya Super Admin)</label>
                 <input 
                   type="text" 
                   value={formData.url || ''} 
                   onChange={e => updateField('url', e.target.value)}
                   className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                  placeholder="https://tokopedia.link/..."
+                  placeholder="https://tokopedia.com/..."
                 />
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Fixed Footer with subtle outline and shadow */}
+        {/* Fixed Footer */}
         <footer className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 flex gap-3 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
           <button 
             onClick={() => { setEditingId(null); setIsAdding(false); }} 
@@ -514,192 +554,313 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </footer>
       </div>
     );
-  }
+  } else {
+    content = (
+      <div className="w-full h-full flex flex-col bg-[#FAFBFD] relative overflow-hidden">
+        
+        {/* Compact Admin Info Header (Name, Username, Role) */}
+        <header className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-[#00AA5B]">
+                <Store size={18} />
+              </div>
+              <div>
+                <h1 className="text-xs font-black text-gray-900 tracking-tight leading-none mb-0.5">Admin Dashboard</h1>
+                <p className="text-[9px] text-[#00AA5B] font-black uppercase tracking-wider">
+                  {user.role === 'super_admin' ? 'Super Admin' : 'Admin Area'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={handleRefresh} 
+                disabled={refreshing}
+                className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg transition"
+                title="Refresh Database"
+              >
+                <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+              </button>
+              
+              <button 
+                onClick={handleLogout} 
+                className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition"
+                title="Logout"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
+          </div>
 
-  if (!isAuthenticated) {
-    return (
-      <div className="w-full h-full flex flex-col bg-white max-w-md mx-auto relative overflow-hidden select-none">
-        {/* Header with back button */}
-        <header className="flex-shrink-0 px-4 py-4 border-b border-gray-50 flex items-center gap-3">
-          <button 
-            onClick={() => window.location.href = '/'} 
-            className="p-2 hover:bg-gray-50 text-gray-600 rounded-full active:scale-95 transition-all"
-          >
-            <ChevronLeft size={20} className="stroke-[2.5]" />
-          </button>
-          <div className="flex flex-col">
-            <h1 className="text-base font-black text-gray-950 tracking-tight">Katalog Admin</h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Area Terbatas</p>
+          {/* User Details & Seeder */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+            <div className="min-w-0">
+              <div className="text-[11px] font-black text-gray-800 truncate">{user.name}</div>
+              <div className="text-[9px] text-gray-400 font-bold lowercase">@{user.username}</div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {produks.length === 0 && (
+                <button 
+                  onClick={handleSeedMocks} 
+                  disabled={seeding}
+                  className="py-1 px-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-amber-700 text-[9px] font-black uppercase tracking-wider transition"
+                >
+                  {seeding ? 'Memuat...' : 'Mocks'}
+                </button>
+              )}
+              <button 
+                onClick={handleAddNew} 
+                className="py-1 px-2 bg-[#00AA5B] hover:bg-[#00914d] text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition flex items-center gap-1"
+              >
+                <Plus size={10} className="stroke-[3]" />
+                <span>Tambah</span>
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Content of PIN screen */}
-        <div className="flex-1 flex flex-col justify-between p-6">
-          {/* Lock Icon & Title */}
-          <div className="flex flex-col items-center justify-center mt-6 text-center space-y-4">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
-              <Lock size={28} className="stroke-[2.5]" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-black text-gray-950">Masukkan PIN Admin</h2>
-              <p className="text-xs font-bold text-gray-400">Silakan masukkan 6 digit PIN keamanan untuk mengakses</p>
-            </div>
-          </div>
+        {/* Product Cards Container (Mobile Cards) */}
+        <main className="flex-1 p-3 space-y-2.5 overflow-y-auto no-scrollbar pb-16">
+          {produks.map((p, idx) => {
+            const currentStatus = p.internal_status || 'pending';
+            
+            // Status Tag colors & text
+            let statusLabel = 'PENDING';
+            let statusStyle = 'bg-amber-50 text-amber-700 border-amber-100';
+            if (currentStatus === 'ready') {
+              statusLabel = 'READY';
+              statusStyle = 'bg-blue-50 text-blue-700 border-blue-100';
+            } else if (currentStatus === 'done') {
+              statusLabel = 'DONE';
+              statusStyle = 'bg-green-50 text-green-700 border-green-100';
+            }
 
-          {/* 6 Column Input slots */}
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              {[0, 1, 2, 3, 4, 5].map((idx) => {
-                const isFilled = pin.length > idx;
-                return (
-                  <div 
-                    key={idx}
-                    className={`w-11 h-14 rounded-2xl border-2 flex items-center justify-center transition-all duration-100 ${
-                      pinError 
-                        ? 'border-red-500 bg-red-50/50' 
-                        : isFilled 
-                          ? 'border-[#00AA5B] bg-green-50/20' 
-                          : 'border-gray-100 bg-[#FAFAFA]'
+            return (
+              <div 
+                key={p.produks_id || `admin-prod-${idx}`} 
+                className="bg-white rounded-2xl p-3.5 border border-gray-100 flex flex-col gap-3 hover:border-gray-200 transition-colors duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.015)]"
+              >
+                {/* Image and Basic Info Row */}
+                <div className="flex gap-3 items-start">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center">
+                    {p.media?.[0] ? (
+                      <img src={p.media[0]} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                        <ImageIcon size={20} />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-[8px] font-black text-[#00AA5B] bg-green-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                        {p.brand || 'No Brand'}
+                      </span>
+                      <span className="text-[8px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                        {p.category}
+                      </span>
+                    </div>
+
+                    <h3 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-1 mb-1">{p.title}</h3>
+                    
+                    {/* Prices list - non shortened, full Rupiah */}
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xs font-black text-gray-950">{formatRupiah(p.sale_price)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Info Grid (Stock, Location, Shop name, rating) */}
+                <div className="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl p-2.5 border border-gray-100/50 text-[9px] font-bold text-gray-500">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1">
+                      <TrendingUp size={10} className="text-gray-400 shrink-0" />
+                      <span>Stok: <strong className="text-gray-800">{p.stock_total}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star size={10} className="text-amber-500 shrink-0 fill-amber-500" />
+                      <span>Rating: <strong className="text-gray-800">{p.shop_rating}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1 truncate">
+                      <Store size={10} className="text-gray-400 shrink-0" />
+                      <span className="truncate">{p.shop_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 truncate">
+                      <MapPin size={10} className="text-gray-400 shrink-0" />
+                      <span className="truncate">{p.shop_location}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Indicator Bar */}
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Status:</span>
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border ${statusStyle}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  {/* Role Transition Button (Swap/Toggle) */}
+                  {user.role === 'admin' && (currentStatus === 'pending' || currentStatus === 'ready') && (
+                    <button 
+                      onClick={() => handleTransition(p.produks_id, currentStatus === 'pending' ? 'ready' : 'pending')}
+                      disabled={transitioningId === p.produks_id}
+                      className={`py-1 px-2.5 rounded-lg shadow-sm transition duration-150 active:scale-95 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                        currentStatus === 'pending' 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                    >
+                      <RefreshCw size={8} className={transitioningId === p.produks_id ? 'animate-spin' : ''} />
+                      <span>{transitioningId === p.produks_id ? 'Proses...' : currentStatus === 'pending' ? 'Mark Ready' : 'Swap Pending'}</span>
+                    </button>
+                  )}
+
+                  {user.role === 'super_admin' && (currentStatus === 'ready' || currentStatus === 'done') && (
+                    <button 
+                      onClick={() => handleTransition(p.produks_id, currentStatus === 'ready' ? 'done' : 'ready')}
+                      disabled={transitioningId === p.produks_id}
+                      className={`py-1 px-2.5 rounded-lg shadow-sm transition duration-150 active:scale-95 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                        currentStatus === 'ready' 
+                          ? 'bg-green-600 hover:bg-green-700 text-white' 
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      <RefreshCw size={8} className={transitioningId === p.produks_id ? 'animate-spin' : ''} />
+                      <span>{transitioningId === p.produks_id ? 'Proses...' : currentStatus === 'ready' ? 'Mark Done' : 'Swap Ready'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Operations & Optional Super Admin URL Block */}
+                <div className="grid grid-cols-3 gap-1.5 border-t border-gray-50 pt-2.5">
+                  {user.role === 'super_admin' && p.url ? (
+                    <button 
+                      onClick={() => window.open(p.url, '_blank')} 
+                      className="flex items-center justify-center gap-1 py-1 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-emerald-100" 
+                      title="Buka URL Tokopedia"
+                    >
+                      <ExternalLink size={10} />
+                      <span>Link</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
+                      className="flex items-center justify-center gap-1 py-1 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-slate-100" 
+                      title="Buka Detail Tokopedia"
+                    >
+                      <ExternalLink size={10} />
+                      <span>Buka</span>
+                    </button>
+                  )}
+
+                  <button 
+                    onClick={() => handleEdit(p)} 
+                    className="flex items-center justify-center gap-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-blue-100" 
+                    title="Edit"
+                  >
+                    <Edit3 size={10} />
+                    <span>Edit</span>
+                  </button>
+
+                  <button 
+                    onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
+                    className="flex items-center justify-center gap-1 py-1 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-rose-100" 
+                    title="Hapus"
+                  >
+                    <Trash2 size={10} />
+                    <span>Hapus</span>
+                  </button>
+                </div>
+
+                {/* Copy URL Button - available ONLY if status is done */}
+                {currentStatus === 'done' && (
+                  <button 
+                    onClick={() => handleCopyUrl(p)}
+                    className={`w-full py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 border ${
+                      copiedId === p.produks_id
+                        ? 'bg-[#00AA5B] border-[#00AA5B] text-white shadow-md shadow-green-100'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200/60 text-slate-700'
                     }`}
                   >
-                    <div 
-                      className={`w-3.5 h-3.5 rounded-full transition-all duration-75 ${
-                        isFilled 
-                          ? 'bg-[#00AA5B] scale-100' 
-                          : 'bg-transparent scale-0'
-                      }`}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {pinError && (
-              <p className="text-xs font-bold text-red-500 text-center">
-                {pinError}
-              </p>
-            )}
-          </div>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      {copiedId === p.produks_id ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376A8.965 8.965 0 0012 12.75a8.965 8.965 0 00-3.75 4.002m9.75 3.125c.621 0 1.125-.504 1.125-1.125V9.75c0-.621-.504-1.125-1.125-1.125h-3.375c-.621 0-1.125.504-1.125 1.125v3.375c0 .621.504 1.125 1.125 1.125h3.375z" />
+                      )}
+                    </svg>
+                    <span>{copiedId === p.produks_id ? 'Berhasil Disalin!' : 'Salin URL Produk'}</span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
 
-          {/* custom mobile on-screen Numberpad (numpad) */}
-          <div className="w-full max-w-xs mx-auto pb-6">
-            <div className="grid grid-cols-3 gap-3">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => handleNumClick(num)}
-                  className="h-14 rounded-2xl bg-[#FAFAFA] active:bg-gray-100 hover:bg-gray-50 flex items-center justify-center text-lg font-extrabold text-gray-900 transition-colors duration-75 active:scale-95"
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                onClick={handleClear}
-                className="h-14 rounded-2xl bg-transparent flex items-center justify-center text-xs font-black text-gray-400 hover:text-gray-600 active:scale-95 transition-all duration-75"
-              >
-                CLEAR
-              </button>
-              <button
-                onClick={() => handleNumClick('0')}
-                className="h-14 rounded-2xl bg-[#FAFAFA] active:bg-gray-100 hover:bg-gray-50 flex items-center justify-center text-lg font-extrabold text-gray-900 transition-colors duration-75 active:scale-95"
-              >
-                0
-              </button>
-              <button
-                onClick={handleBackspace}
-                className="h-14 rounded-2xl bg-transparent flex items-center justify-center text-gray-500 hover:text-gray-700 active:scale-95 transition-all duration-75"
-                title="Hapus"
-              >
-                <Delete size={20} className="stroke-[2.5]" />
-              </button>
+          {produks.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
+              <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100">
+                <Package size={28} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-black text-gray-900">Belum ada produk</p>
+                <p className="text-[10px] text-gray-400 font-bold max-w-[200px] mx-auto uppercase tracking-wide">Tambahkan item baru sekarang</p>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col max-w-md mx-auto shadow-2xl relative">
-      <header className="p-4 bg-white border-b sticky top-0 z-10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-           <button onClick={() => window.location.href = '/'} className="p-2 hover:bg-gray-100 rounded-full">
-            <ChevronLeft size={20} />
-          </button>
-          <h1 className="text-xl font-black text-gray-900 tracking-tight">Katalog Admin</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleAddNew} className="p-2.5 bg-green-500 text-white rounded-full shadow-lg shadow-green-100 active:scale-95 transition">
-            <Plus size={20} />
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-950 md:bg-[#0B0F19] flex items-center justify-center font-sans relative antialiased selection:bg-[#00AA5B]/20">
+      {/* Premium background light glow on desktop */}
+      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-green-500/10 blur-[120px]" />
+        <div className="absolute top-1/2 right-10 w-80 h-80 rounded-full bg-emerald-500/10 blur-[100px]" />
+      </div>
 
-      <main className="flex-1 p-4 space-y-4 overflow-y-auto no-scrollbar">
-        {produks.map((p, idx) => (
-          <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3 group">
-            <div className="flex gap-4 items-start">
-              <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-50 transition-transform group-hover:scale-105">
-                {p.media?.[0] ? (
-                  <img src={p.media[0]} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
-                    <ImageIcon size={24} />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{p.brand}</p>
-                <h3 className="text-[14px] font-bold text-gray-900 leading-tight line-clamp-2 mb-2">{p.title}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-black text-green-600">Rp {(p.sale_price/1000000).toFixed(1)}jt</span>
-                  <span className="text-[10px] text-gray-400 line-through">Rp {(p.price/1000000).toFixed(1)}jt</span>
-                </div>
-              </div>
-            </div>
+      {/* Main smartphone device frame mockup on desktop, full-screen on mobile */}
+      <div className="w-full h-screen md:h-[850px] md:max-w-[412px] bg-white md:rounded-[48px] md:border-[12px] md:border-slate-900 md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden transition-all duration-300 md:ring-1 md:ring-white/10">
+        
+        {/* Dynamic Notch / Island on desktop */}
+        <div className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-2xl z-50 items-center justify-center pointer-events-none">
+          <div className="w-2.5 h-2.5 rounded-full bg-slate-950 mr-2 border border-white/5" />
+          <div className="w-12 h-1 bg-slate-950 rounded-full" />
+        </div>
 
-            <div className="grid grid-cols-3 gap-2 border-t border-gray-50 pt-2">
-              <button 
-                onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
-                className="flex items-center justify-center gap-1.5 py-2 px-1 bg-blue-50 text-blue-600 text-[11px] font-extrabold rounded-xl transition hover:bg-blue-100 active:scale-95" 
-                title="Buka Produk"
-              >
-                <ExternalLink size={13} />
-                <span>Buka</span>
-              </button>
-              <button 
-                onClick={() => handleEdit(p)} 
-                className="flex items-center justify-center gap-1.5 py-2 px-1 bg-green-50 text-green-600 text-[11px] font-extrabold rounded-xl transition hover:bg-green-100 active:scale-95" 
-                title="Edit Produk"
-              >
-                <Edit3 size={13} />
-                <span>Edit</span>
-              </button>
-              <button 
-                onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
-                className="flex items-center justify-center gap-1.5 py-2 px-1 bg-red-50 text-red-600 text-[11px] font-extrabold rounded-xl transition hover:bg-red-100 active:scale-95" 
-                title="Hapus Produk"
-              >
-                <Trash2 size={13} />
-                <span>Hapus</span>
-              </button>
+        {/* Dynamic status bar for authentic mobile experience */}
+        <div className="flex-shrink-0 px-6 pt-3 pb-1 flex justify-between items-center text-[10px] font-black text-gray-500 bg-white select-none z-40 border-b border-gray-50">
+          <span>09:41</span>
+          <div className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.79-1.79C9.09 19.63 10.51 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+            </svg>
+            <span className="text-[9px] font-bold">5G</span>
+            <div className="w-5 h-2.5 border border-gray-400 rounded-sm p-0.5 flex items-center">
+              <div className="h-full w-3.5 bg-gray-500 rounded-[1px]" />
             </div>
           </div>
-        ))}
+        </div>
 
-        {produks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
-              <Package size={40} className="text-gray-300" />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <p className="font-bold text-gray-900">Belum ada produk</p>
-              <p className="text-sm text-gray-500 mb-3">Tambahkan produk baru dengan mengklik tombol + di kanan atas</p>
-            </div>
-          </div>
-        )}
-      </main>
+        {/* Device content space */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
+          {content}
+        </div>
 
-      
+        {/* Bottom virtual home indicator on desktop */}
+        <div className="hidden md:flex flex-shrink-0 h-4 bg-white items-center justify-center select-none z-40">
+          <div className="w-28 h-1 bg-gray-300 rounded-full" />
+        </div>
+      </div>
     </div>
   );
 };
