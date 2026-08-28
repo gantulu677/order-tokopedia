@@ -8,6 +8,46 @@ const supabaseUrl = 'https://jvqrturbkgyxsycdcfwp.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2cXJ0dXJia2d5eHN5Y2RjZndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDUzNjEsImV4cCI6MjA5Mjk4MTM2MX0.zMwmCC5s6M1hvPD5cRcde-cGxRc5E9NsIGoEnE2htis';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Auto-align administrative credentials with requested catalog
+async function syncAdminCredentials() {
+  try {
+    const defaultAdmins = [
+      {
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        username: "admin",
+        name: "Admin",
+        pin: "123456",
+        role: "admin"
+      },
+      {
+        id: "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
+        username: "superadmin",
+        name: "Super Admin",
+        pin: "272727",
+        role: "super_admin"
+      }
+    ];
+
+    for (const record of defaultAdmins) {
+      const { error } = await supabase
+        .from("tokped_admin")
+        .upsert([record], { onConflict: "id" });
+      
+      if (error) {
+        console.warn(`Upsert sync warning for ${record.username}, trying manual update:`, error.message);
+        await supabase
+          .from("tokped_admin")
+          .update({ pin: record.pin, name: record.name, username: record.username, role: record.role })
+          .eq("id", record.id);
+      }
+    }
+    console.log("Database admin credentials aligned successfully.");
+  } catch (err) {
+    console.error("Database admin sync error:", err);
+  }
+}
+syncAdminCredentials();
+
 const app = express();
 app.use(express.json());
 app.use(cookieParser("super-secret-tokped-key"));
@@ -91,7 +131,7 @@ app.post("/api/auth/login", async (req, res) => {
           id: "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
           username: "superadmin",
           name: "Super Admin",
-          pin: "654321",
+          pin: "272727",
           role: "super_admin"
         }
       ];

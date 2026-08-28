@@ -64,8 +64,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleCopyUrl = (p: Product) => {
-    // If we have p.url and the user is super_admin, we can copy that; otherwise always copy the mirror URL
-    const urlToCopy = (user.role === 'super_admin' && p.url) ? p.url : `${window.location.origin}/?produks_id=${p.produks_id}`;
+    const urlToCopy = `${window.location.origin}/?produks_id=${p.produks_id}`;
     navigator.clipboard.writeText(urlToCopy).then(() => {
       setCopiedId(p.produks_id);
       setTimeout(() => {
@@ -741,25 +740,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* Operations & Optional Super Admin URL Block */}
                 <div className="grid grid-cols-3 gap-1.5 border-t border-gray-50 pt-2.5">
-                  {user.role === 'super_admin' && p.url ? (
-                    <button 
-                      onClick={() => window.open(p.url, '_blank')} 
-                      className="flex items-center justify-center gap-1 py-1 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-emerald-100" 
-                      title="Buka URL Tokopedia"
-                    >
-                      <ExternalLink size={10} />
-                      <span>Link</span>
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
-                      className="flex items-center justify-center gap-1 py-1 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-slate-100" 
-                      title="Buka Detail Tokopedia"
-                    >
-                      <ExternalLink size={10} />
-                      <span>Buka</span>
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
+                    className="flex items-center justify-center gap-1 py-1 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-slate-100" 
+                    title="Buka Detail Produk"
+                  >
+                    <ExternalLink size={10} />
+                    <span>Link</span>
+                  </button>
 
                   <button 
                     onClick={() => handleEdit(p)} 
