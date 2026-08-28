@@ -265,7 +265,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-extrabold text-gray-900">{formatCurrency(currentSalePrice)}</span>
+                {discountPercentage > 0 && <span className="text-sm text-gray-400 line-through font-medium">{formatCurrency(currentPrice)}</span>}
               </div>
+              {discountPercentage > 0 && <span className="bg-red-50 text-red-600 font-bold px-2 py-1 rounded text-xs">DISKON {discountPercentage}%</span>}
             </div>
             <h1 className="text-lg text-gray-800 leading-tight mt-2 font-semibold">{product.title}</h1>
             <div className="flex items-center gap-4 mt-3">

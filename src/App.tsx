@@ -4,7 +4,9 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminPinEntry from './components/AdminPinEntry';
 import Checkout from './components/Checkout';
 import IsBlocked from './components/IsBlocked';
+import { initialProduksList } from './data';
 import { Product } from './types';
+import { supabase } from './lib/supabase';
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -12,11 +14,10 @@ export default function App() {
   const [produks, setProduks] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGlobalBlocked, setIsGlobalBlocked] = useState<boolean>(false);
-  
-  // Backend session user state
-  const [adminUser, setAdminUser] = useState<{ id: string; username: string; name: string; role: 'admin' | 'super_admin' } | null>(null);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(() => {
+    return sessionStorage.getItem('adminAuthorized') === 'true';
+  });
 
-  // Check global block status
   useEffect(() => {
     const checkBlockStatus = async () => {
       try {
@@ -34,12 +35,13 @@ export default function App() {
     };
     
     checkBlockStatus();
+    // Poll every 3 seconds to ensure incredibly fast lock/unlock feedback
     const interval = setInterval(checkBlockStatus, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Sync window location changes
   useEffect(() => {
+// ... existing useEffect handleLocationChange ...
     const handleLocationChange = () => {
       setPath(window.location.pathname);
       setSearch(window.location.search);
@@ -48,95 +50,90 @@ export default function App() {
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  // Redirect if visiting root with no product selected
   useEffect(() => {
     if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
       window.location.replace('https://tokopedia.com/');
     }
   }, [path, search]);
 
-  // Load backend session first on mount, and then fetch products
-  useEffect(() => {
-    const loadSessionAndProducts = async () => {
-      try {
-        // Try to load session from sessionStorage first (iframe compatibility fallback)
-        const storedSession = sessionStorage.getItem('tokped_admin_session');
-        let currentAdmin = null;
-        if (storedSession) {
-          try {
-            currentAdmin = JSON.parse(storedSession);
-            setAdminUser(currentAdmin);
-          } catch (e) {}
-        }
-
-        // 1. Fetch current admin session
-        const headers: Record<string, string> = {};
-        if (currentAdmin) {
-          headers['X-Admin-Session'] = JSON.stringify(currentAdmin);
-        }
-        const meRes = await fetch('/api/auth/me', { headers });
-        if (meRes.ok) {
-          const meData = await meRes.json();
-          if (meData.authenticated && meData.user) {
-            setAdminUser(meData.user);
-            sessionStorage.setItem('tokped_admin_session', JSON.stringify(meData.user));
-          }
-        } else if (!storedSession) {
-          setAdminUser(null);
-          sessionStorage.removeItem('tokped_admin_session');
-        }
-      } catch (err) {
-        console.error('Failed to load session:', err);
-      } finally {
-        // 2. Fetch products (this API will strip the 'url' parameter if not super_admin)
-        await fetchProducts();
-      }
-    };
-
-    loadSessionAndProducts();
-  }, []);
-
   const fetchProducts = async () => {
     try {
-      const storedSession = sessionStorage.getItem('tokped_admin_session');
-      const headers: Record<string, string> = {};
-      if (storedSession) {
-        headers['X-Admin-Session'] = storedSession;
-      }
-      const res = await fetch('/api/produks', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setProduks(data || []);
-      } else {
-        console.error('Failed to fetch products from API');
-      }
+      const { data, error } = await supabase
+        .from('produks')
+        .select('*');
+      if (error) throw error;
+      setProduks(data || []);
     } catch (error) {
-      console.error('Error fetching products from API:', error);
+      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchProducts();
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'produks'
+        },
+        () => {
+          fetchProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Disable iOS Safari gestures
+    const handleGesture = (e: Event) => e.preventDefault();
+    document.addEventListener("gesturestart", handleGesture);
+    document.addEventListener("gesturechange", handleGesture);
+    document.addEventListener("gestureend", handleGesture);
+
+    // Disable Ctrl + Scroll zoom
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Disable keyboard zoom
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=")) ||
+        (e.ctrlKey && e.key === "0")
+      ) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("gesturestart", handleGesture);
+      document.removeEventListener("gesturechange", handleGesture);
+      document.removeEventListener("gestureend", handleGesture);
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   const handleAddProduct = async (newProduct: Product) => {
     try {
-      const storedSession = sessionStorage.getItem('tokped_admin_session');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (storedSession) {
-        headers['X-Admin-Session'] = storedSession;
-      }
-      const res = await fetch('/api/produks', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(newProduct),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Server error');
-      }
-      await fetchProducts();
+      const { error } = await supabase
+        .from('produks')
+        .insert([newProduct]);
+      if (error) throw error;
     } catch (error: any) {
       console.error('Error adding product:', error);
       alert('Gagal menambah produk: ' + (error?.message || error));
@@ -145,24 +142,11 @@ export default function App() {
 
   const handleEditProduct = async (updatedProduct: Product) => {
     try {
-      const storedSession = sessionStorage.getItem('tokped_admin_session');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (storedSession) {
-        headers['X-Admin-Session'] = storedSession;
-      }
-      const res = await fetch(`/api/produks/${updatedProduct.produks_id}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(updatedProduct),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Server error');
-      }
-      await fetchProducts();
+      const { error } = await supabase
+        .from('produks')
+        .update(updatedProduct)
+        .eq('produks_id', updatedProduct.produks_id);
+      if (error) throw error;
     } catch (error: any) {
       console.error('Error editing product:', error);
       alert('Gagal mengubah produk: ' + (error?.message || error));
@@ -171,32 +155,28 @@ export default function App() {
 
   const handleDeleteProduct = async (id: string) => {
     try {
-      const storedSession = sessionStorage.getItem('tokped_admin_session');
-      const headers: Record<string, string> = {};
-      if (storedSession) {
-        headers['X-Admin-Session'] = storedSession;
-      }
-      const res = await fetch(`/api/produks/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Server error');
-      }
-      await fetchProducts();
+      const { error } = await supabase
+        .from('produks')
+        .delete()
+        .eq('produks_id', id);
+      if (error) throw error;
     } catch (error: any) {
       console.error('Error deleting product:', error);
       alert('Gagal menghapus produk: ' + (error?.message || error));
     }
   };
 
+  const handleAuthSuccess = () => {
+    setIsAdminAuthorized(true);
+    sessionStorage.setItem('adminAuthorized', 'true');
+  };
+
   if (loading) {
+// ... existing loading UI ...
     return (
       <div className="flex items-center justify-center h-full bg-white max-w-md mx-auto shadow-2xl">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#00AA5B] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-sm font-bold text-gray-500">Menghubungkan ke Database...</p>
         </div>
       </div>
@@ -223,21 +203,16 @@ export default function App() {
   }
 
   if (path === '/admin') {
-    const defaultSuperAdmin = {
-      id: "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
-      username: "superadmin",
-      name: "Super Admin",
-      role: 'super_admin' as const
-    };
+    if (!isAdminAuthorized) {
+      return <AdminPinEntry onSuccess={handleAuthSuccess} />;
+    }
     return (
       <AdminDashboard 
         produks={produks} 
-        user={adminUser || defaultSuperAdmin}
         onAdd={handleAddProduct}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
         onRefresh={fetchProducts}
-        onLogout={() => {}}
       />
     );
   }
@@ -268,13 +243,16 @@ function BadGatewayErrorPage() {
   return (
     <div className="min-h-screen bg-[#F9FAFB] text-[#374151] font-sans flex flex-col justify-between p-6 sm:p-12">
       <div className="max-w-4xl mx-auto w-full pt-6 sm:pt-12">
+        {/* Error Code & Large Header */}
         <div className="border-b border-gray-200 pb-8">
           <div className="text-sm font-black uppercase tracking-widest text-rose-600 mb-2">Error 502</div>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 mb-3">Bad Gateway</h1>
           <p className="text-sm sm:text-base text-gray-500 font-medium">The proxy server received an invalid response from an upstream server.</p>
         </div>
 
+        {/* Diagnostic CDN-style connection status map */}
         <div className="my-10 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+          {/* Item 1: Browser */}
           <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -286,6 +264,7 @@ function BadGatewayErrorPage() {
             <span className="text-[10px] font-mono text-gray-400 font-bold">IP: 114.122.14.88</span>
           </div>
 
+          {/* Item 2: Origin Server */}
           <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -297,6 +276,7 @@ function BadGatewayErrorPage() {
           </div>
         </div>
 
+        {/* Technical Explanations */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 shadow-sm space-y-6">
           <div>
             <h2 className="text-base font-black text-gray-900 mb-2">What happened?</h2>
@@ -310,6 +290,7 @@ function BadGatewayErrorPage() {
         </div>
       </div>
 
+      {/* Footer diagnostic block */}
       <div className="max-w-4xl mx-auto w-full text-[11px] text-gray-400 font-mono py-8 border-t border-gray-100 mt-12 flex flex-col sm:flex-row justify-between gap-4">
         <div className="space-y-1">
           <p>Ray ID: <span className="text-gray-600 font-bold">{rayId}</span></p>
