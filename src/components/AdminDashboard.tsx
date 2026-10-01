@@ -199,10 +199,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setUploading(true);
     const uploadData = new FormData();
     uploadData.append('file', file);
-    uploadData.append('upload_preset', 'webflow');
+    uploadData.append('upload_preset', 'tokopedia');
 
     try {
-      const response = await fetch('https://api.cloudinary.com/v1_1/daj5cu840/image/upload', {
+      const response = await fetch('https://api.cloudinary.com/v1_1/dgcfyiqco/image/upload', {
         method: 'POST',
         body: uploadData,
       });
