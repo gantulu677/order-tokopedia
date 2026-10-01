@@ -634,7 +634,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Grid Actions */}
                 <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
                   <button 
-                    onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
+                    onClick={() => window.open(`/${p.produks_id}`, '_blank')} 
                     className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
                     title="Buka Produk"
                   >

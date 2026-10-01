@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ProductDetail from './components/ProductDetail';
 import AdminDashboard from './components/AdminDashboard';
@@ -58,14 +59,24 @@ function TokopediaSplashScreen({ message }: { message: string }) {
 }
 
 export default function App() {
-  const [path, setPath] = useState(window.location.pathname);
-  const [search, setSearch] = useState(window.location.search);
   const [produks, setProduks] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGlobalBlocked, setIsGlobalBlocked] = useState<boolean>(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(() => {
     return sessionStorage.getItem('adminAuthorized') === 'true';
   });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Backward compatibility: Redirect from query param (?produks_id=...) to path parameter (/:produks_id)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryId = searchParams.get('produks_id');
+    if (queryId) {
+      navigate(`/${queryId}`, { replace: true });
+    }
+  }, [location.search, navigate]);
 
   useEffect(() => {
     const checkBlockStatus = async () => {
@@ -89,21 +100,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-// ... existing useEffect handleLocationChange ...
-    const handleLocationChange = () => {
-      setPath(window.location.pathname);
-      setSearch(window.location.search);
-    };
-    window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, []);
 
-  useEffect(() => {
-    if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
-      window.location.replace('https://tokopedia.com/');
-    }
-  }, [path, search]);
 
   const fetchProducts = async () => {
     try {
@@ -224,46 +221,58 @@ export default function App() {
     return <TokopediaSplashScreen message="Menghubungkan ke Database..." />;
   }
 
-  if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
-    return <TokopediaSplashScreen message="Mengalihkan ke Tokopedia..." />;
-  }
-
-  if (path === '/is-blocked') {
-    return <IsBlocked />;
-  }
-
   if (isGlobalBlocked) {
     return <BadGatewayErrorPage />;
   }
 
-  if (path === '/admin') {
-    if (!isAdminAuthorized) {
-      return <AdminPinEntry onSuccess={handleAuthSuccess} />;
+  return (
+    <Routes>
+      <Route path="/is-blocked" element={<IsBlocked />} />
+      <Route path="/admin" element={
+        !isAdminAuthorized ? (
+          <AdminPinEntry onSuccess={handleAuthSuccess} />
+        ) : (
+          <AdminDashboard 
+            produks={produks} 
+            onAdd={handleAddProduct}
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
+            onRefresh={fetchProducts}
+          />
+        )
+      } />
+      <Route path="/checkout" element={
+        <Checkout 
+          produks={produks} 
+          onBack={() => {
+            const searchParams = new URLSearchParams(location.search);
+            const currentId = searchParams.get('produks_id');
+            if (currentId) {
+              navigate(`/${currentId}`);
+            } else {
+              navigate(-1);
+            }
+          }} 
+        />
+      } />
+      <Route path="/:produks_id" element={<ProductDetail key={location.pathname} produks={produks} />} />
+      <Route path="/" element={<RootRedirect />} />
+    </Routes>
+  );
+}
+
+function RootRedirect() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const queryId = searchParams.get('produks_id');
+    if (!queryId) {
+      window.location.replace('https://tokopedia.com/');
     }
-    return (
-      <AdminDashboard 
-        produks={produks} 
-        onAdd={handleAddProduct}
-        onEdit={handleEditProduct}
-        onDelete={handleDeleteProduct}
-        onRefresh={fetchProducts}
-      />
-    );
-  }
+  }, [location]);
 
-  if (path === '/checkout') {
-    return (
-      <Checkout 
-        produks={produks} 
-        onBack={() => {
-          window.history.pushState(null, '', '/' + search);
-          window.dispatchEvent(new Event('popstate'));
-        }} 
-      />
-    );
-  }
-
-  return <ProductDetail key={search} produks={produks} />;
+  return <TokopediaSplashScreen message="Mengalihkan ke Tokopedia..." />;
 }
 
 function BadGatewayErrorPage() {

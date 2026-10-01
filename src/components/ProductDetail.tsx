@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -33,6 +34,9 @@ interface ExternalProduct {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
+  const { produks_id } = useParams<{ produks_id?: string }>();
+  const navigate = useNavigate();
+
   const [product, setProduct] = useState<any>(null);
   const [externalProducts, setExternalProducts] = useState<ExternalProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +64,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
         
         await new Promise(resolve => setTimeout(resolve, 600));
         
-        const params = new URLSearchParams(window.location.search);
-        const produksId = params.get('produks_id') || produks[0]?.produks_id;
+        const produksId = produks_id || produks[0]?.produks_id;
         
         const data = produks.find(p => p.produks_id === produksId);
         
@@ -588,12 +591,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
         <button className="p-3 border border-gray-200 rounded-xl"><MessageSquare className="w-6 h-6 text-gray-600" /></button>
         <div className="flex-1 flex gap-2">
           <button onClick={() => {
-            window.history.pushState(null, '', '/checkout' + window.location.search);
-            window.dispatchEvent(new Event('popstate'));
+            if (product) {
+              navigate(`/checkout?produks_id=${product.id}`);
+            }
           }} className="flex-1 bg-white border-2 border-green-500 text-green-500 font-black py-3 rounded-xl text-xs">Beli Langsung</button>
           <button onClick={() => {
-            window.history.pushState(null, '', '/checkout' + window.location.search);
-            window.dispatchEvent(new Event('popstate'));
+            if (product) {
+              navigate(`/checkout?produks_id=${product.id}`);
+            }
           }} className="flex-1 bg-green-500 text-white font-black py-3 rounded-xl text-xs shadow-lg shadow-green-100">+ Keranjang</button>
         </div>
       </footer>
