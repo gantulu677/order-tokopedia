@@ -228,7 +228,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/is-blocked" element={<IsBlocked />} />
-      <Route path="/admin" element={
+      <Route path="/makkasau" element={
         !isAdminAuthorized ? (
           <AdminPinEntry onSuccess={handleAuthSuccess} />
         ) : (
