@@ -11,8 +11,7 @@ import {
   ChevronLeft,
   ExternalLink,
   RefreshCw,
-  Lock,
-  Delete
+  Search
 } from 'lucide-react';
 import { Product, ColorVariant, StorageVariant } from '../types';
 import { initialProduksList } from '../data';
@@ -50,36 +49,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [seeding, setSeeding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [pin, setPin] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [pinError, setPinError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('Semua');
 
-  const handleNumClick = (num: string) => {
-    if (pin.length >= 6) return;
-    setPinError(null);
-    const newPin = pin + num;
-    setPin(newPin);
+  const uniqueBrands = React.useMemo(() => {
+    const list = new Set<string>();
+    produks.forEach(p => {
+      if (p.brand) list.add(p.brand);
+    });
+    return ['Semua', ...Array.from(list)];
+  }, [produks]);
 
-    if (newPin.length === 6) {
-      if (newPin === '677677') {
-        setIsAuthenticated(true);
-        setPin('');
-      } else {
-        setPinError('PIN salah, silakan coba lagi');
-        setPin('');
-      }
-    }
-  };
-
-  const handleBackspace = () => {
-    setPinError(null);
-    setPin(prev => prev.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    setPinError(null);
-    setPin('');
-  };
+  const filteredProduks = React.useMemo(() => {
+    return produks.filter(p => {
+      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (p.brand && p.brand.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                            (p.produks_id && p.produks_id.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesBrand = selectedBrand === 'Semua' || p.brand === selectedBrand;
+      return matchesSearch && matchesBrand;
+    });
+  }, [produks, searchQuery, selectedBrand]);
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -516,106 +505,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </footer>
       </div>
     );
-  } else if (!isAuthenticated) {
-    content = (
-      <div className="w-full h-full flex flex-col bg-white relative overflow-hidden select-none">
-        {/* Header with back button */}
-        <header className="flex-shrink-0 px-4 py-4 border-b border-gray-50 flex items-center gap-3">
-          <button 
-            onClick={() => window.location.href = '/'} 
-            className="p-2 hover:bg-gray-50 text-gray-600 rounded-full active:scale-95 transition-all"
-          >
-            <ChevronLeft size={20} className="stroke-[2.5]" />
-          </button>
-          <div className="flex flex-col">
-            <h1 className="text-base font-black text-gray-950 tracking-tight">Katalog Admin</h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Area Terbatas</p>
-          </div>
-        </header>
-
-        {/* Content of PIN screen */}
-        <div className="flex-1 flex flex-col justify-between p-6">
-          {/* Lock Icon & Title */}
-          <div className="flex flex-col items-center justify-center mt-6 text-center space-y-4">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
-              <Lock size={28} className="stroke-[2.5]" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-black text-gray-950">Masukkan PIN Admin</h2>
-              <p className="text-xs font-bold text-gray-400">Silakan masukkan 6 digit PIN keamanan untuk mengakses</p>
-            </div>
-          </div>
-
-          {/* 6 Column Input slots */}
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              {[0, 1, 2, 3, 4, 5].map((idx) => {
-                const isFilled = pin.length > idx;
-                return (
-                  <div 
-                    key={idx}
-                    className={`w-11 h-14 rounded-2xl border-2 flex items-center justify-center transition-all duration-100 ${
-                      pinError 
-                        ? 'border-red-500 bg-red-50/50' 
-                        : isFilled 
-                          ? 'border-[#00AA5B] bg-green-50/20' 
-                          : 'border-gray-100 bg-[#FAFAFA]'
-                    }`}
-                  >
-                    <div 
-                      className={`w-3.5 h-3.5 rounded-full transition-all duration-75 ${
-                        isFilled 
-                          ? 'bg-[#00AA5B] scale-100' 
-                          : 'bg-transparent scale-0'
-                      }`}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {pinError && (
-              <p className="text-xs font-bold text-red-500 text-center">
-                {pinError}
-              </p>
-            )}
-          </div>
-
-          {/* custom mobile on-screen Numberpad (numpad) */}
-          <div className="w-full max-w-xs mx-auto pb-6">
-            <div className="grid grid-cols-3 gap-3">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => handleNumClick(num)}
-                  className="h-14 rounded-2xl bg-[#FAFAFA] active:bg-gray-100 hover:bg-gray-50 flex items-center justify-center text-lg font-extrabold text-gray-900 transition-colors duration-75 active:scale-95"
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                onClick={handleClear}
-                className="h-14 rounded-2xl bg-transparent flex items-center justify-center text-xs font-black text-gray-400 hover:text-gray-600 active:scale-95 transition-all duration-75"
-              >
-                CLEAR
-              </button>
-              <button
-                onClick={() => handleNumClick('0')}
-                className="h-14 rounded-2xl bg-[#FAFAFA] active:bg-gray-100 hover:bg-gray-50 flex items-center justify-center text-lg font-extrabold text-gray-900 transition-colors duration-75 active:scale-95"
-              >
-                0
-              </button>
-              <button
-                onClick={handleBackspace}
-                className="h-14 rounded-2xl bg-transparent flex items-center justify-center text-gray-500 hover:text-gray-700 active:scale-95 transition-all duration-75"
-                title="Hapus"
-              >
-                <Delete size={20} className="stroke-[2.5]" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   } else {
     const formatRupiah = (num: number) => {
       return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -639,11 +528,67 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </header>
 
-        <main className="flex-1 p-3 space-y-2 overflow-y-auto no-scrollbar pb-16">
-          {produks.map((p, idx) => (
-            <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-xl p-3 border border-gray-100 flex flex-col gap-2.5 hover:border-gray-200 transition-colors duration-150 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+        <main className="flex-1 p-3 space-y-3 overflow-y-auto no-scrollbar pb-20">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 gap-2 px-0.5">
+            <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Total Produk</span>
+              <span className="text-base font-black text-gray-900 tabular-nums">
+                {produks.length} <span className="text-[11px] font-bold text-gray-400">item</span>
+              </span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Rata-Rata Harga</span>
+              <span className="text-xs font-black text-[#00AA5B] tabular-nums truncate block">
+                {formatRupiah(Math.round(produks.reduce((acc, p) => acc + (p.sale_price || 0), 0) / (produks.length || 1)))}
+              </span>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="px-0.5">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+              <input
+                type="text"
+                placeholder="Cari produk atau brand..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-gray-100 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#00AA5B] focus:ring-4 focus:ring-green-500/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Brand Filter Horizontal Chips */}
+          <div className="flex gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-none select-none">
+            {uniqueBrands.map(b => (
+              <button
+                key={b}
+                onClick={() => setSelectedBrand(b)}
+                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg whitespace-nowrap transition-all duration-75 border ${
+                  selectedBrand === b 
+                    ? 'bg-[#00AA5B] text-white border-[#00AA5B] shadow-sm' 
+                    : 'bg-white text-gray-400 border-gray-100 hover:text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+
+          {/* Product Cards */}
+          {filteredProduks.map((p, idx) => (
+            <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-xl p-3 border border-gray-100 flex flex-col gap-3 hover:border-gray-200 transition-colors duration-150 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
               <div className="flex gap-3 items-center">
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center">
                   {p.media?.[0] ? (
                     <img src={p.media[0]} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
@@ -664,43 +609,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-1.5 border-t border-gray-50 pt-2">
+              <div className="grid grid-cols-3 gap-2 border-t border-gray-50 pt-3">
                 <button 
                   onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
-                  className="flex items-center justify-center gap-1 py-1 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-slate-100" 
+                  className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
                   title="Buka Produk"
                 >
-                  <ExternalLink size={11} />
-                  <span>Buka</span>
+                  <ExternalLink size={13} className="stroke-[2.5]" />
+                  <span>Lihat</span>
                 </button>
                 <button 
                   onClick={() => handleEdit(p)} 
-                  className="flex items-center justify-center gap-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-blue-100" 
+                  className="flex items-center justify-center gap-1.5 h-10 bg-emerald-50 hover:bg-emerald-100/80 text-[#00AA5B] text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-green-100/50" 
                   title="Edit"
                 >
-                  <Edit3 size={11} />
-                  <span>Edit</span>
+                  <Edit3 size={13} className="stroke-[2.5]" />
+                  <span>Ubah</span>
                 </button>
                 <button 
                   onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
-                  className="flex items-center justify-center gap-1 py-1 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-wider rounded-lg transition active:scale-95 border border-rose-100" 
+                  className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/30" 
                   title="Hapus"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={13} className="stroke-[2.5]" />
                   <span>Hapus</span>
                 </button>
               </div>
             </div>
           ))}
 
-          {produks.length === 0 && (
+          {filteredProduks.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
               <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100">
                 <Package size={28} />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-black text-gray-900">Belum ada produk</p>
-                <p className="text-[10px] text-gray-400 font-bold max-w-[200px] mx-auto uppercase tracking-wide">Tambahkan item baru sekarang</p>
+                <p className="text-xs font-black text-gray-900">Tidak ada produk ditemukan</p>
+                <p className="text-[10px] text-gray-400 font-bold max-w-[200px] mx-auto uppercase tracking-wide">Coba kata kunci pencarian atau filter lain</p>
               </div>
             </div>
           )}

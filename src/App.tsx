@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ProductDetail from './components/ProductDetail';
 import AdminDashboard from './components/AdminDashboard';
 import AdminPinEntry from './components/AdminPinEntry';
@@ -7,6 +8,54 @@ import IsBlocked from './components/IsBlocked';
 import { initialProduksList } from './data';
 import { Product } from './types';
 import { supabase } from './lib/supabase';
+
+function TokopediaSplashScreen({ message }: { message: string }) {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldRender(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-between p-8 font-sans max-w-md mx-auto shadow-2xl border-x border-gray-100">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6">
+        <div className="w-56 h-56 flex items-center justify-center relative">
+          {/* Authentic green spinning loader as placeholder/fallback */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-[#00AA5B]/20 border-t-[#00AA5B] rounded-full animate-spin"></div>
+          </div>
+          
+          {shouldRender && (
+            <div className="w-full h-full z-10 bg-white">
+              <DotLottieReact
+                src="https://lottie.host/774f8994-8ee1-4e19-bd71-9ad3c2438ddf/h7CR2SH9YJ.lottie"
+                loop
+                autoplay
+              />
+            </div>
+          )}
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-black text-[#00AA5B] tracking-wide uppercase">Tokopedia Shop</p>
+          <p className="text-xs font-bold text-gray-400">{message}</p>
+        </div>
+      </div>
+      
+      {/* Brand Footer */}
+      <div className="flex flex-col items-center gap-1.5 pb-6">
+        <span className="text-[9px] font-bold text-gray-300 uppercase tracking-[0.2em]">Authorized Shop Mirror</span>
+        <div className="flex items-center gap-1.5 text-gray-400 select-none">
+          <span className="text-xs font-black text-[#00AA5B]">tokopedia</span>
+          <span className="text-xs font-bold text-gray-200">|</span>
+          <span className="text-[10px] font-bold text-gray-400 tracking-wider">iBox Authorized</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
@@ -172,26 +221,11 @@ export default function App() {
   };
 
   if (loading) {
-// ... existing loading UI ...
-    return (
-      <div className="flex items-center justify-center h-full bg-white max-w-md mx-auto shadow-2xl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-bold text-gray-500">Menghubungkan ke Database...</p>
-        </div>
-      </div>
-    );
+    return <TokopediaSplashScreen message="Menghubungkan ke Database..." />;
   }
 
   if (path === '/' && !new URLSearchParams(search).get('produks_id')) {
-    return (
-      <div className="flex items-center justify-center h-full bg-white max-w-md mx-auto shadow-2xl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#00AA5B] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-bold text-gray-500">Mengalihkan ke Tokopedia...</p>
-        </div>
-      </div>
-    );
+    return <TokopediaSplashScreen message="Mengalihkan ke Tokopedia..." />;
   }
 
   if (path === '/is-blocked') {
