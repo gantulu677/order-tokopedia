@@ -528,20 +528,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </header>
 
-        <main className="flex-1 p-3 space-y-3 overflow-y-auto no-scrollbar pb-20">
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 gap-2 px-0.5">
-            <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Total Produk</span>
-              <span className="text-base font-black text-gray-900 tabular-nums">
-                {produks.length} <span className="text-[11px] font-bold text-gray-400">item</span>
-              </span>
-            </div>
-            <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Rata-Rata Harga</span>
-              <span className="text-xs font-black text-[#00AA5B] tabular-nums truncate block">
-                {formatRupiah(Math.round(produks.reduce((acc, p) => acc + (p.sale_price || 0), 0) / (produks.length || 1)))}
-              </span>
+        <main className="flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24">
+          {/* Dashboard KPI Banner */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.01)] overflow-hidden">
+            <div className="grid grid-cols-2 divide-x divide-gray-50">
+              <div className="p-4 flex flex-col">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Total Katalog</span>
+                <span className="text-xl font-extrabold text-gray-900 tabular-nums">
+                  {produks.length} <span className="text-xs font-semibold text-gray-400">produk</span>
+                </span>
+              </div>
+              <div className="p-4 flex flex-col">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Rata-Rata Harga</span>
+                <span className="text-sm font-extrabold text-[#00AA5B] tabular-nums truncate block">
+                  {formatRupiah(Math.round(produks.reduce((acc, p) => acc + (p.sale_price || 0), 0) / (produks.length || 1)))}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -573,9 +575,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 key={b}
                 onClick={() => setSelectedBrand(b)}
-                className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg whitespace-nowrap transition-all duration-75 border ${
+                className={`px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg whitespace-nowrap transition-all duration-75 border ${
                   selectedBrand === b 
-                    ? 'bg-[#00AA5B] text-white border-[#00AA5B] shadow-sm' 
+                    ? 'bg-[#00AA5B] text-white border-[#00AA5B] shadow-sm shadow-green-100' 
                     : 'bg-white text-gray-400 border-gray-100 hover:text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -585,58 +587,80 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Product Cards */}
-          {filteredProduks.map((p, idx) => (
-            <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-xl p-3 border border-gray-100 flex flex-col gap-3 hover:border-gray-200 transition-colors duration-150 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
-              <div className="flex gap-3 items-center">
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center">
-                  {p.media?.[0] ? (
-                    <img src={p.media[0]} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
-                      <ImageIcon size={18} />
+          {filteredProduks.map((p, idx) => {
+            const hasDiscount = p.price > p.sale_price;
+            return (
+              <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-3.5 hover:border-gray-200 transition-colors duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+                <div className="flex gap-3.5 items-start">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center shadow-sm">
+                    {p.media?.[0] ? (
+                      <img src={p.media[0]} alt="" className="w-full h-full object-cover animate-fade-in" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                        <ImageIcon size={18} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 select-none">
+                      <span>{p.brand || 'No Brand'}</span>
+                      <span>·</span>
+                      <span className="font-mono">{p.produks_id}</span>
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="inline-block text-[9px] font-black text-[#00AA5B] bg-green-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider mb-0.5">
-                    {p.brand}
-                  </span>
-                  <h3 className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">{p.title}</h3>
-                  <div className="flex items-baseline gap-1.5 mt-0.5">
-                    <span className="text-[12px] font-black text-gray-900">{formatRupiah(p.sale_price)}</span>
-                    <span className="text-[9px] text-gray-400 line-through font-medium">{formatRupiah(p.price)}</span>
+                    <h3 className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">{p.title}</h3>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <span className="text-[13px] font-black text-[#00AA5B] tabular-nums">{formatRupiah(p.sale_price)}</span>
+                      {hasDiscount && (
+                        <span className="text-[10px] text-gray-400 line-through font-bold tabular-nums">{formatRupiah(p.price)}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-2 border-t border-gray-50 pt-3">
-                <button 
-                  onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
-                  className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
-                  title="Buka Produk"
-                >
-                  <ExternalLink size={13} className="stroke-[2.5]" />
-                  <span>Lihat</span>
-                </button>
-                <button 
-                  onClick={() => handleEdit(p)} 
-                  className="flex items-center justify-center gap-1.5 h-10 bg-emerald-50 hover:bg-emerald-100/80 text-[#00AA5B] text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-green-100/50" 
-                  title="Edit"
-                >
-                  <Edit3 size={13} className="stroke-[2.5]" />
-                  <span>Ubah</span>
-                </button>
-                <button 
-                  onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
-                  className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/30" 
-                  title="Hapus"
-                >
-                  <Trash2 size={13} className="stroke-[2.5]" />
-                  <span>Hapus</span>
-                </button>
+                {/* Stock Level Indicator */}
+                <div className="bg-gray-50/50 rounded-xl p-2.5">
+                  <div className="flex justify-between items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1.5">
+                    <span>Stok Terjual</span>
+                    <span className="text-gray-600 font-black tabular-nums">{p.stock_sold} / {p.stock_total} <span className="text-[8px] text-gray-400">item</span></span>
+                  </div>
+                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#00AA5B] rounded-full transition-all duration-300" 
+                      style={{ width: `${Math.min(100, Math.round(((p.stock_sold || 0) / (p.stock_total || 1)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Grid Actions */}
+                <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
+                  <button 
+                    onClick={() => window.open(`/?produks_id=${p.produks_id}`, '_blank')} 
+                    className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
+                    title="Buka Produk"
+                  >
+                    <ExternalLink size={12} className="stroke-[2.5]" />
+                    <span>Lihat</span>
+                  </button>
+                  <button 
+                    onClick={() => handleEdit(p)} 
+                    className="flex items-center justify-center gap-1.5 h-10 bg-emerald-50 hover:bg-emerald-100/80 text-[#00AA5B] text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-green-100/30" 
+                    title="Edit"
+                  >
+                    <Edit3 size={12} className="stroke-[2.5]" />
+                    <span>Ubah</span>
+                  </button>
+                  <button 
+                    onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
+                    className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" 
+                    title="Hapus"
+                  >
+                    <Trash2 size={12} className="stroke-[2.5]" />
+                    <span>Hapus</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {filteredProduks.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center gap-3">

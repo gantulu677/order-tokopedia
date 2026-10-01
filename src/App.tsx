@@ -15,7 +15,7 @@ function TokopediaSplashScreen({ message }: { message: string }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShouldRender(true);
-    }, 100);
+    }, 180);
     return () => clearTimeout(timer);
   }, []);
 
