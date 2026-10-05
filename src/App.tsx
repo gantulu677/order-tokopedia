@@ -216,17 +216,13 @@ export default function App() {
     <Routes>
       <Route path="/is-blocked" element={<IsBlocked />} />
       <Route path="/makkasau" element={
-        !isAdminAuthorized ? (
-          <AdminPinEntry onSuccess={handleAuthSuccess} />
-        ) : (
-          <AdminDashboard 
-            produks={produks} 
-            onAdd={handleAddProduct}
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteProduct}
-            onRefresh={fetchProducts}
-          />
-        )
+        <AdminDashboard 
+          produks={produks} 
+          onAdd={handleAddProduct}
+          onEdit={handleEditProduct}
+          onDelete={handleDeleteProduct}
+          onRefresh={fetchProducts}
+        />
       } />
       <Route path="/checkout" element={
         <Checkout 
