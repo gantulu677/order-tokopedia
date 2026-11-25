@@ -14,6 +14,7 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
   enableManagementTabs?: boolean;
+  produksLoading?: boolean;
 };
 type Step = 'phone' | 'register' | 'set-pin' | 'login' | 'recover';
 
@@ -42,6 +43,10 @@ export default function AdminPortal(props: Props) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [ready, setReady] = useState(false);
+  const [changePinOpen, setChangePinOpen] = useState(false);
+  const [currentPin, setCurrentPin] = useState('');
+  const [changePinValue, setChangePinValue] = useState('');
+  const [changePinConfirm, setChangePinConfirm] = useState('');
 
   const clearStoredSession = () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -150,19 +155,25 @@ export default function AdminPortal(props: Props) {
     setNotice('PIN berhasil diperbarui. Silakan login menggunakan PIN baru.');
   });
 
-  const changePin = async () => {
-    const currentPin = window.prompt('Masukkan PIN lama (6 digit):') || '';
-    if (!currentPin) return;
-    const nextPin = window.prompt('Masukkan PIN baru (6 digit):') || '';
-    if (!/^\d{6}$/.test(nextPin)) {
-      window.alert('PIN baru harus tepat 6 digit');
-      return;
-    }
+  const changePin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
     try {
-      await adminApi('change-pin', { currentPin, newPin: nextPin });
-      window.alert('PIN berhasil diperbarui.');
+      if (!/^\d{6}$/.test(currentPin)) throw new Error('PIN lama harus tepat 6 digit');
+      if (!/^\d{6}$/.test(changePinValue)) throw new Error('PIN baru harus tepat 6 digit');
+      if (changePinValue !== changePinConfirm) throw new Error('Konfirmasi PIN tidak sama');
+      await adminApi('change-pin', { currentPin, newPin: changePinValue });
+      setCurrentPin('');
+      setChangePinValue('');
+      setChangePinConfirm('');
+      setChangePinOpen(false);
+      setNotice('PIN berhasil diperbarui.');
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Gagal mengubah PIN');
+      setError(e instanceof Error ? e.message : 'Gagal mengubah PIN');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -174,6 +185,10 @@ export default function AdminPortal(props: Props) {
     setPin('');
     setName('');
     setStep('phone');
+    setChangePinOpen(false);
+    setCurrentPin('');
+    setChangePinValue('');
+    setChangePinConfirm('');
     setError('');
     setNotice('');
   };
@@ -201,30 +216,50 @@ export default function AdminPortal(props: Props) {
     const isKnownRoute = isProducts || isProfile || isBank || isLiveChat;
     return <div className="w-full h-full min-h-full flex flex-col bg-[#F8FAFC]">
       <header className="shrink-0 flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">Admin Dashboard</h1></div>
+        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">{isProducts ? (currentPath === '/admin' ? 'Produk' : currentPath.endsWith('/new') ? 'Tambah Produk' : 'Ubah Produk') : isBank ? 'Rekening Bank' : isLiveChat ? 'Livechat' : isProfile ? 'Profil Akun' : 'Admin Dashboard'}</h1></div>
         <button type="button" onClick={() => navigate('/admin/profile')} className={'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ' + (isProfile ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600')} aria-current={isProfile ? 'page' : undefined}><ShieldCheck size={15}/> Profil</button>
       </header>
-      <main className="content-admin min-h-0 flex-1 overflow-y-auto">
+      <main className="content-admin min-h-0 flex-1 flex flex-col overflow-hidden">
         {!isKnownRoute ? <div className="p-8 text-center"><h2 className="text-lg font-black text-gray-900">Halaman Admin Tidak Ditemukan</h2><p className="mt-2 text-sm text-gray-500">Alamat halaman yang dibuka tidak tersedia.</p><button onClick={() => navigate('/admin')} className="mt-4 rounded-xl bg-[#00AA5B] px-4 py-2 text-sm font-bold text-white">Kembali ke Produk</button></div>
         : isProducts ? <AdminDashboard {...props} role={profile.role}/>
         : isBank || isLiveChat ? <AdminManagement tab={activeTab as 'bank' | 'livechat'} role={profile.role} phone={profile.phone}/>
         : <section className="mx-auto w-full max-w-2xl space-y-4 p-4">
+            {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600">{error}</p>}
+            {notice && <p role="status" className="rounded-xl border border-green-100 bg-green-50 p-3 text-xs font-medium text-green-700">{notice}</p>}
             <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-base font-black text-gray-900">Profil Akun</h2><dl className="mt-4 space-y-4 text-sm">
               <div><dt className="text-xs font-semibold text-gray-400">Nama</dt><dd className="mt-1 font-bold text-gray-800">{profile.name || 'Belum diatur'}</dd></div>
               <div><dt className="text-xs font-semibold text-gray-400">Nomor Telepon</dt><dd className="mt-1 font-bold text-gray-800">+{profile.phone}</dd></div>
               <div><dt className="text-xs font-semibold text-gray-400">Role</dt><dd className="mt-1 font-bold capitalize text-gray-800">{profile.role}</dd></div>
             </dl></div>
             <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-sm font-black text-gray-900">Pengaturan Akun</h2>
-              <button onClick={() => void changePin()} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left text-sm font-bold text-gray-700"><KeyRound size={17}/> Ganti PIN</button>
+              <button type="button" onClick={() => { setChangePinOpen(true); setError(''); setNotice(''); }} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left text-sm font-bold text-gray-700"><KeyRound size={17}/> Ganti PIN</button>
               <button onClick={logout} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-red-100 p-3 text-left text-sm font-bold text-red-600"><LogOut size={17}/> Logout</button>
             </div>
+            {changePinOpen && <form onSubmit={changePin} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-3">
+              <h3 className="text-sm font-black text-gray-900">Perbarui PIN</h3>
+              <label className="block text-xs font-semibold text-gray-600">PIN Lama
+                <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} value={currentPin} onChange={event => setCurrentPin(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+              </label>
+              <label className="block text-xs font-semibold text-gray-600">PIN Baru
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinValue} onChange={event => setChangePinValue(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+              </label>
+              <label className="block text-xs font-semibold text-gray-600">Konfirmasi PIN Baru
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinConfirm} onChange={event => setChangePinConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="Ulangi 6 digit PIN baru" />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => { setChangePinOpen(false); setCurrentPin(''); setChangePinValue(''); setChangePinConfirm(''); setError(''); }} className="flex-1 rounded-xl border border-gray-200 p-3 text-xs font-bold text-gray-600 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={busy} className="flex-1 rounded-xl bg-[#00AA5B] p-3 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Menyimpan...' : 'Simpan PIN'}</button>
+              </div>
+            </form>}
           </section>}
       </main>
+      {!isLiveChat && (
       <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
         <button onClick={() => navigate('/admin')} aria-current={activeTab === 'produk' ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'produk' ? 'text-[#00AA5B]' : 'text-gray-400')}><Package size={18}/> Produk</button>
         <button onClick={() => navigate('/admin/bank')} aria-current={isBank ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isBank ? 'text-[#00AA5B]' : 'text-gray-400')}><Landmark size={18}/> Bank</button>
         <button onClick={() => navigate('/admin/live-chat')} aria-current={isLiveChat ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isLiveChat ? 'text-[#00AA5B]' : 'text-gray-400')}><MessageCircle size={18}/> Livechat</button>
       </nav>
+      )}
     </div>;
   }
 

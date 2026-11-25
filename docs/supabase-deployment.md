@@ -20,3 +20,8 @@ repository migration history has been reconciled against the live project.
 When ready, also configure the GitHub secret `SUPABASE_DB_PASSWORD`. The
 workflow then links the project, displays migration status, and applies pending
 repository migrations. Never commit Supabase access tokens or database passwords.
+
+
+## Current migration history inventory
+
+See [Supabase migration history reconciliation](./supabase-migration-reconciliation.md) for the inspected live migration versions, repository files, and exact drift. The migration deployment gate must remain disabled until that history is fully reconstructed and reviewed.

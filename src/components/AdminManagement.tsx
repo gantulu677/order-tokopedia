@@ -49,8 +49,14 @@ export default function AdminManagement({ tab, role, phone }: Props) {
   const [bankError, setBankError] = useState('');
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationCursor, setConversationCursor] = useState('');
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageCursor, setMessageCursor] = useState('');
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [conversationId, setConversationId] = useState('');
   const [messageDraft, setMessageDraft] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
@@ -68,24 +74,60 @@ export default function AdminManagement({ tab, role, phone }: Props) {
     }
   };
 
-  const loadConversations = async () => {
+  const loadConversations = async (before?: string, reset = false) => {
     try {
-      const result = await adminApi<{ conversations: Conversation[] }>('chat-list-conversations');
-      setConversations(result.conversations || []);
+      const result = await adminApi<{
+        conversations: Conversation[];
+        hasMore: boolean;
+        nextCursor: string | null;
+      }>('chat-list-conversations', before ? { before } : {});
+      setConversations(current => {
+        const combined = reset ? (result.conversations || []) : [...current, ...(result.conversations || [])];
+        const unique = new Map<string, Conversation>();
+        for (const item of combined) {
+          const existing = unique.get(item.phone);
+          if (!existing || new Date(item.createdAt).getTime() > new Date(existing.createdAt).getTime()) {
+            unique.set(item.phone, item);
+          }
+        }
+        return Array.from(unique.values()).sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
+      if (reset || before) {
+        setConversationCursor(result.nextCursor || '');
+        setHasMoreConversations(result.hasMore === true);
+      }
     } catch (error) {
       setChatError(error instanceof Error ? error.message : 'Gagal memuat percakapan');
     }
   };
 
-  const loadMessages = async (target: string) => {
+  const loadMessages = async (target: string, before?: string, reset = false) => {
     if (!target) return;
     try {
-      const result = await adminApi<{ conversationId: string; messages: ChatMessage[] }>(
+      const result = await adminApi<{
+        conversationId: string;
+        messages: ChatMessage[];
+        hasMore: boolean;
+        nextCursor: string | null;
+      }>(
         'chat-get-messages',
-        { phone: target }
+        before ? { phone: target, before } : { phone: target }
       );
       setConversationId(result.conversationId);
-      setMessages(result.messages || []);
+      setMessages(current => {
+        if (reset) return result.messages || [];
+        const combined = before ? [...(result.messages || []), ...current] : [...current, ...(result.messages || [])];
+        const unique = new Map(combined.map(message => [message.id, message]));
+        return Array.from(unique.values()).sort((a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
+      if (reset || before) {
+        setMessageCursor(result.nextCursor || '');
+        setHasOlderMessages(result.hasMore === true);
+      }
     } catch (error) {
       setChatError(error instanceof Error ? error.message : 'Gagal memuat pesan');
     }
@@ -100,18 +142,26 @@ export default function AdminManagement({ tab, role, phone }: Props) {
     setChatError('');
     if (role === 'admin') {
       setSelectedPhone('');
+      setConversations([]);
+      setConversationCursor('');
+      setHasMoreConversations(false);
       setMessages([]);
+      setMessageCursor('');
+      setHasOlderMessages(false);
       setConversationId('');
-      void loadConversations();
+      void loadConversations(undefined, true);
     } else {
       setSelectedPhone('');
-      void loadMessages(phone);
     }
   }, [tab, role, phone]);
 
   useEffect(() => {
     if (tab !== 'livechat' || !targetPhone) return;
-    void loadMessages(targetPhone);
+    setMessages([]);
+    setMessageCursor('');
+    setHasOlderMessages(false);
+    setConversationId('');
+    void loadMessages(targetPhone, undefined, true);
   }, [tab, targetPhone]);
 
   useEffect(() => {
@@ -202,17 +252,7 @@ export default function AdminManagement({ tab, role, phone }: Props) {
   if (tab === 'bank') {
     return (
       <div className="w-full min-h-full flex flex-col bg-[#F8FAFC]">
-        <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-5">
-          <div className="flex items-center gap-2 text-[#00AA5B]">
-            <Banknote size={20} />
-            <h1 className="text-lg font-black text-gray-900">Rekening Bank</h1>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Kelola rekening pembayaran.
-          </p>
-        </header>
-
-        <main className="p-4 space-y-3">
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
           {bankError && <p className="rounded-xl bg-red-50 text-red-600 p-3 text-xs">{bankError}</p>}
           {!bankDraft && (
             <button onClick={() => setBankDraft(emptyBank())} className="w-full rounded-xl bg-[#00AA5B] text-white p-3 text-sm font-bold flex items-center justify-center gap-2">
@@ -281,18 +321,8 @@ export default function AdminManagement({ tab, role, phone }: Props) {
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC]">
-      <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-4">
-        <div className="flex items-center gap-2 text-[#00AA5B]">
-          <MessageCircle size={20} />
-          <h1 className="text-lg font-black text-gray-900">Livechat</h1>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {role === 'admin' ? 'Daftar percakapan pengguna.' : 'Percakapan Anda dengan Admin.'}
-        </p>
-      </header>
-
       {role === 'admin' && !selectedPhone ? (
-        <main className="p-3 space-y-2">
+        <main className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
           {chatError && <p className="rounded-xl bg-red-50 p-3 text-xs text-red-600">{chatError}</p>}
           {conversations.map(conversation => (
             <button key={conversation.phone} onClick={() => setSelectedPhone(conversation.phone)} className="w-full rounded-xl border border-gray-100 bg-white p-3 text-left hover:border-green-200">
@@ -304,6 +334,14 @@ export default function AdminManagement({ tab, role, phone }: Props) {
             </button>
           ))}
           {conversations.length === 0 && <p className="py-12 text-center text-sm text-gray-400">Belum ada percakapan.</p>}
+          {hasMoreConversations && conversationCursor && (
+            <button type="button" disabled={loadingMoreConversations} onClick={() => {
+              setLoadingMoreConversations(true);
+              void loadConversations(conversationCursor).finally(() => setLoadingMoreConversations(false));
+            }} className="w-full rounded-xl border border-gray-200 bg-white p-3 text-xs font-bold text-gray-600 disabled:opacity-50">
+              {loadingMoreConversations ? 'Memuat percakapan...' : 'Muat percakapan lainnya'}
+            </button>
+          )}
         </main>
       ) : (
         <>
@@ -317,6 +355,14 @@ export default function AdminManagement({ tab, role, phone }: Props) {
           )}
 
           <main className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+            {hasOlderMessages && messageCursor && (
+              <button type="button" disabled={loadingOlderMessages} onClick={() => {
+                setLoadingOlderMessages(true);
+                void loadMessages(targetPhone, messageCursor).finally(() => setLoadingOlderMessages(false));
+              }} className="mx-auto block rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 disabled:opacity-50">
+                {loadingOlderMessages ? 'Memuat pesan...' : 'Muat pesan sebelumnya'}
+              </button>
+            )}
             {messages.map(message => (
               <div key={message.id} className={'flex ' + (message.role === role ? 'justify-end' : 'justify-start')}>
                 <div className={'max-w-[85%] rounded-2xl px-3 py-2 ' + (message.role === role ? 'bg-[#00AA5B] text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-md')}>

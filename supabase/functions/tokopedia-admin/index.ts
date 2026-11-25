@@ -78,6 +78,27 @@ function isValidProductFeatures(value: unknown): value is Array<{ label: string;
     typeof (feature as Record<string, unknown>).value === "string"
   );
 }
+function validateProductNumbers(product: Record<string, unknown>) {
+  const numericFields = ["price", "sale_price", "stock_total", "stock_sold"] as const;
+  const parsed: Partial<Record<typeof numericFields[number], number>> = {};
+  for (const field of numericFields) {
+    if (!Object.prototype.hasOwnProperty.call(product, field)) continue;
+    const value = product[field];
+    if ((typeof value !== "number" && typeof value !== "string") || String(value).trim() === "") {
+      return `${field} harus berupa angka yang valid.`;
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) return `${field} tidak boleh negatif dan harus berupa angka valid.`;
+    if ((field === "stock_total" || field === "stock_sold") && !Number.isInteger(number)) {
+      return `${field} harus berupa bilangan bulat.`;
+    }
+    parsed[field] = number;
+  }
+  if (parsed.stock_total !== undefined && parsed.stock_sold !== undefined && parsed.stock_sold > parsed.stock_total) {
+    return "Stok terjual tidak boleh melebihi total stok.";
+  }
+  return null;
+}
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -235,19 +256,14 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Nama bank, pemilik, dan nomor rekening wajib diisi" }, 400);
       }
       if (isDefault && !isActive) return response({ error: "Rekening utama harus aktif" }, 400);
-      if (isDefault) {
-        const { error: resetError } = await db.from("admin_bank").update({ is_default: false }).neq("id", id);
-        if (resetError) return response({ error: "Gagal memperbarui rekening utama" }, 400);
-      }
-      const { data, error } = await db.from("admin_bank").upsert({
-        id,
-        bank_name: bankName,
-        account_name: accountName,
-        account_number: accountNumber,
-        is_active: isActive,
-        is_default: isDefault,
-        updated_at: new Date().toISOString(),
-      }).select().single();
+      const { data, error } = await db.rpc("admin_bank_save", {
+        p_id: id,
+        p_bank_name: bankName,
+        p_account_name: accountName,
+        p_account_number: accountNumber,
+        p_is_active: isActive,
+        p_is_default: isDefault,
+      });
       if (error) return response({ error: error.message }, 400);
       return response({ bank: data });
     }
@@ -262,10 +278,12 @@ Deno.serve(async (req: Request) => {
 
     if (action === "chat-list-conversations") {
       if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
-      const { data, error } = await db.from("admin_chat")
+      const before = String(body.before || "").trim();
+      let query = db.from("admin_chat")
         .select("phone,role,message,created_at")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+        .order("created_at", { ascending: false });
+      if (before) query = query.lt("created_at", before);
+      const { data, error } = await query.limit(500);
       if (error) return response({ error: "Gagal memuat daftar percakapan" }, 400);
       const seen = new Set<string>();
       const conversations = [];
@@ -279,7 +297,7 @@ Deno.serve(async (req: Request) => {
           createdAt: row.created_at,
         });
       }
-      return response({ conversations });
+      return response({ conversations, hasMore: (data || []).length === 500, nextCursor: data?.length === 500 ? data[data.length - 1].created_at : null });
     }
 
     if (action === "chat-get-messages") {
@@ -287,15 +305,19 @@ Deno.serve(async (req: Request) => {
         ? normalizePhone(String(body.phone || ""))
         : account.phone;
       if (!validPhone(targetPhone)) return response({ error: "Nomor percakapan tidak valid" }, 400);
-      const { data, error } = await db.from("admin_chat")
+      const before = String(body.before || "").trim();
+      let query = db.from("admin_chat")
         .select("id,phone,role,message,created_at")
         .eq("phone", targetPhone)
-        .order("created_at", { ascending: true })
-        .limit(500);
+        .order("created_at", { ascending: false });
+      if (before) query = query.lt("created_at", before);
+      const { data, error } = await query.limit(100);
       if (error) return response({ error: "Gagal memuat pesan" }, 400);
       return response({
         conversationId: await chatConversationTopicId(targetPhone),
-        messages: data || [],
+        messages: (data || []).reverse(),
+        hasMore: (data || []).length === 100,
+        nextCursor: data?.length === 100 ? data[data.length - 1].created_at : null,
       });
     }
 
@@ -322,6 +344,8 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Data produk tidak valid" }, 400);
       }
       const product = { ...body.product };
+      const numberError = validateProductNumbers(product);
+      if (numberError) return response({ error: numberError }, 400);
       if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
         return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
       }
@@ -335,6 +359,8 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Data produk tidak valid" }, 400);
       }
       const product = { ...body.product };
+      const numberError = validateProductNumbers(product);
+      if (numberError) return response({ error: numberError }, 400);
       if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
         return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
       }
