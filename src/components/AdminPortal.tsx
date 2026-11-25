@@ -15,7 +15,6 @@ type Props = {
 
 const PHONE_KEY = 'tokopedia_admin_phone';
 const TOKEN_KEY = 'tokopedia_admin_token';
-const PROFILE_KEY = 'tokopedia_admin_profile';
 
 export default function AdminPortal(props: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -32,8 +31,7 @@ export default function AdminPortal(props: Props) {
 
   const applySession = (result: any) => {
     localStorage.setItem(PHONE_KEY, result.profile.phone);
-    localStorage.setItem(TOKEN_KEY, result.token);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile));
+    sessionStorage.setItem(TOKEN_KEY, result.token);
     setProfile(result.profile);
     setError('');
   };
@@ -44,8 +42,10 @@ export default function AdminPortal(props: Props) {
       // Never persist or replay a PIN from browser storage.
       // A fresh password login is required when the page is reopened.
       const savedPhone = localStorage.getItem(PHONE_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem('tokopedia_admin_profile');
+      localStorage.removeItem('tokopedia_admin_pin');
       if (active && savedPhone) setPhone(savedPhone);
       if (active) setReady(true);
     };
@@ -109,8 +109,10 @@ export default function AdminPortal(props: Props) {
   };
 
   const logout = () => {
+    sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem('tokopedia_admin_profile');
+    localStorage.removeItem('tokopedia_admin_pin');
     localStorage.removeItem(PHONE_KEY);
     localStorage.removeItem(PIN_KEY);
     setProfile(null); setPassword(''); setPin('');
