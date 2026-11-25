@@ -172,22 +172,18 @@ export default function App() {
 
   const handleAddProduct = async (newProduct: Product) => {
     try { await adminApi('product-create', { product: newProduct }); await fetchProducts(); }
-    catch (error: any) { console.error('Error adding product:', error); alert('Gagal menambah produk: ' + (error?.message || error)); throw error; }
+    catch (error: any) { console.error('Error adding product:', error); throw error; }
   };
 
   const handleEditProduct = async (updatedProduct: Product) => {
     try { await adminApi('product-update', { product: updatedProduct }); await fetchProducts(); }
-    catch (error: any) { console.error('Error editing product:', error); alert('Gagal mengubah produk: ' + (error?.message || error)); throw error; }
+    catch (error: any) { console.error('Error editing product:', error); throw error; }
   };
 
   const handleDeleteProduct = async (id: string) => {
     try { await adminApi('product-delete', { produks_id: id }); await fetchProducts(); }
     catch (error: any) { console.error('Error deleting product:', error); alert('Gagal menghapus produk: ' + (error?.message || error)); throw error; }
   };
-
-  if (loading) {
-    return <TokopediaSplashScreen message="Menghubungkan ke Database..." />;
-  }
 
   if (isGlobalBlocked) {
     return <BadGatewayErrorPage />;
@@ -196,10 +192,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/is-blocked" element={<IsBlocked />} />
-      <Route path="/admin/*" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} enableManagementTabs />} />
-      <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
+      <Route path="/admin/*" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} produksLoading={loading} enableManagementTabs />} />
+      <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} produksLoading={loading} />} />
       <Route path="/checkout" element={
-        <Checkout 
+        {loading ? <TokopediaSplashScreen message="Menghubungkan ke Database..." /> : <Checkout 
           produks={produks} 
           onBack={() => {
             const searchParams = new URLSearchParams(location.search);
@@ -210,9 +206,9 @@ export default function App() {
               navigate(-1);
             }
           }} 
-        />
+        />}
       } />
-      <Route path="/:produks_id" element={<ProductDetail key={location.pathname} produks={produks} />} />
+      <Route path="/:produks_id" element={loading ? <TokopediaSplashScreen message="Menghubungkan ke Database..." /> : <ProductDetail key={location.pathname} produks={produks} />} />
       <Route path="/" element={<RootRedirect />} />
     </Routes>
   );
