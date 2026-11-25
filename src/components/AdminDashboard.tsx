@@ -113,6 +113,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     produks_id: '',
     title: '',
     description: '',
+    features: createDefaultProductFeatures(),
     category: 'Elektronik',
     brand: '',
     media: [''],
