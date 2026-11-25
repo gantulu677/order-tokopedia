@@ -169,7 +169,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-sans max-w-md mx-auto shadow-2xl border-x border-gray-100">
+      <div className="min-h-full bg-white flex flex-col items-center justify-center p-8 font-sans max-w-md mx-auto shadow-2xl border-x border-gray-100">
         <div className="flex flex-col items-center justify-center gap-6">
           <div className="w-56 h-56 flex items-center justify-center relative">
             {/* Authentic green spinning loader as placeholder/fallback */}

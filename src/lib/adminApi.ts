@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://bkyqbbigfvfaobblxziu.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_HIzGXC7XaboKJQzF8sztiQ_Qoh4B4Gr';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJreXFiYmlnZnZmYW9iYmx4eml1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4OTkzNDAsImV4cCI6MjExMDQ3NTM0MH0.eQAVNbXm9xBtEZ4VpJsA46lEvnJYZnm3enktYs12Vik';
 
 export function normalizePhone(value: string): string {
   let digits = String(value || '').replace(/\D/g, '');
