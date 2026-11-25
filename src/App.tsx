@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ProductDetail from './components/ProductDetail';
 import AdminPortal from './components/AdminPortal';
 import { adminApi } from './lib/adminApi';
 import Checkout from './components/Checkout';
-import IsBlocked from './components/IsBlocked';
-import { initialProduksList } from './data';
 import { Product } from './types';
 import { supabase } from './lib/supabase';
 
@@ -61,7 +59,6 @@ function TokopediaSplashScreen({ message }: { message: string }) {
 export default function App() {
   const [produks, setProduks] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isGlobalBlocked, setIsGlobalBlocked] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -73,30 +70,6 @@ export default function App() {
       navigate(`/${queryId}`, { replace: true });
     }
   }, [location.search, location.pathname, navigate]);
-
-  useEffect(() => {
-    const checkBlockStatus = async () => {
-      try {
-        const res = await fetch("https://jvqrturbkgyxsycdcfwp.supabase.co/rest/v1/blocked?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2cXJ0dXJia2d5eHN5Y2RjZndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDUzNjEsImV4cCI6MjA5Mjk4MTM2MX0.zMwmCC5s6M1hvPD5cRcde-cGxRc5E9NsIGoEnE2htis");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            const hasBlocked = data.some(item => item.is_blocked === true);
-            setIsGlobalBlocked(hasBlocked);
-          }
-        }
-      } catch (err) {
-        console.error("Error checking global block status:", err);
-      }
-    };
-    
-    checkBlockStatus();
-    // Poll every 3 seconds to ensure incredibly fast lock/unlock feedback
-    const interval = setInterval(checkBlockStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-
 
   const fetchProducts = async () => {
     try {
@@ -128,7 +101,7 @@ export default function App() {
           fetchProducts();
         }
       )
-      .subscribe();
+      .subscribe((status) => { if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error('Supabase Realtime subscription status: ' + status); });
 
     return () => {
       supabase.removeChannel(channel);
@@ -189,13 +162,9 @@ export default function App() {
     return <TokopediaSplashScreen message="Menghubungkan ke Database..." />;
   }
 
-  if (isGlobalBlocked) {
-    return <BadGatewayErrorPage />;
-  }
 
   return (
     <Routes>
-      <Route path="/is-blocked" element={<IsBlocked />} />
       <Route path="/admin" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
       <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
       <Route path="/checkout" element={
@@ -232,76 +201,3 @@ function RootRedirect() {
   return <TokopediaSplashScreen message="Mengalihkan ke Tokopedia..." />;
 }
 
-function BadGatewayErrorPage() {
-  const rayId = React.useMemo(() => {
-    return Math.random().toString(16).substring(2, 10).toUpperCase() + Math.random().toString(16).substring(2, 10).toUpperCase();
-  }, []);
-  const timestamp = React.useMemo(() => {
-    return new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-[#F9FAFB] text-[#374151] font-sans flex flex-col justify-between p-6 sm:p-12">
-      <div className="max-w-4xl mx-auto w-full pt-6 sm:pt-12">
-        {/* Error Code & Large Header */}
-        <div className="border-b border-gray-200 pb-8">
-          <div className="text-sm font-black uppercase tracking-widest text-rose-600 mb-2">Error 502</div>
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 mb-3">Bad Gateway</h1>
-          <p className="text-sm sm:text-base text-gray-500 font-medium">The proxy server received an invalid response from an upstream server.</p>
-        </div>
-
-        {/* Diagnostic CDN-style connection status map */}
-        <div className="my-10 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-          {/* Item 1: Browser */}
-          <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-bold text-gray-900 mb-1">Your Browser</h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 mb-1">not Working</span>
-            <span className="text-[10px] font-mono text-gray-400 font-bold">IP: 114.122.14.88</span>
-          </div>
-
-          {/* Item 2: Origin Server */}
-          <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-bold text-gray-900 mb-1">Host Server (Tokopedia Mirror)</h3>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700">Error 502</span>
-          </div>
-        </div>
-
-        {/* Technical Explanations */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 shadow-sm space-y-6">
-          <div>
-            <h2 className="text-base font-black text-gray-900 mb-2">What happened?</h2>
-            <p className="text-sm leading-relaxed text-gray-600">The gateway server received an invalid or empty response from the upstream application server. This usually occurs when the backend application host crashed, is under maintenance, or fails to properly handshake with our reverse proxy layer.</p>
-          </div>
-
-          <div className="border-t border-gray-100 pt-6">
-            <h2 className="text-base font-black text-gray-900 mb-2">What can I do?</h2>
-            <p className="text-sm leading-relaxed text-gray-600">If you are a regular visitor, please try refreshing the page in a few minutes. If you are the system administrator, please review your application health checks, gateway endpoints, and verify that the target service container is up and listening on port 3000.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer diagnostic block */}
-      <div className="max-w-4xl mx-auto w-full text-[11px] text-gray-400 font-mono py-8 border-t border-gray-100 mt-12 flex flex-col sm:flex-row justify-between gap-4">
-        <div className="space-y-1">
-          <p>Ray ID: <span className="text-gray-600 font-bold">{rayId}</span></p>
-          <p>Client IP: <span className="text-gray-600 font-bold">114.122.14.88</span></p>
-          <p>Timestamp: <span className="text-gray-600 font-bold">{timestamp}</span></p>
-        </div>
-        <div className="space-y-1 sm:text-right font-bold">
-          <p>Server: <span className="text-gray-600">nginx/1.26.1 (CentOS)</span></p>
-          <p>Gateway Connection: <span className="text-rose-500">Failed (Upstream Error)</span></p>
-        </div>
-      </div>
-    </div>
-  );
-}
