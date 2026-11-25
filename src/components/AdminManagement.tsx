@@ -105,7 +105,6 @@ export default function AdminManagement({ tab, role, phone }: Props) {
       void loadConversations();
     } else {
       setSelectedPhone('');
-      void loadMessages(phone);
     }
   }, [tab, role, phone]);
 
