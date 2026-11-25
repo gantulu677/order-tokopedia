@@ -32,6 +32,9 @@ export default function AdminPortal(props: Props) {
   const [ready, setReady] = useState(false);
 
   const applySession = (result: any) => {
+    const previousPhone = localStorage.getItem(PHONE_KEY);
+    if (previousPhone !== result.profile.phone) localStorage.removeItem(PIN_KEY);
+    localStorage.setItem(PHONE_KEY, result.profile.phone);
     localStorage.setItem(TOKEN_KEY, result.token);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile));
     setProfile(result.profile);
