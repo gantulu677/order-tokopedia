@@ -191,19 +191,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
 
     try {
-      if (isAdding) {
-        await onAdd(finalProduct as Product);
-      } else {
-        await onEdit(finalProduct as Product);
-      }
-      if (onRefresh) {
-        await onRefresh();
-      }
+      const colors = typeof finalProduct.colors === 'string' ? JSON.parse(finalProduct.colors || '[]') : finalProduct.colors;
+      const variants = typeof finalProduct.variants === 'string' ? JSON.parse(finalProduct.variants || '[]') : finalProduct.variants;
+      if (!Array.isArray(colors) || !Array.isArray(variants)) throw new Error('Warna dan varian harus berupa JSON array.');
+      if (Number(finalProduct.stock_sold) > Number(finalProduct.stock_total)) throw new Error('Stok terjual tidak boleh melebihi total stok.');
+      const payload = { ...finalProduct, colors: JSON.stringify(colors), variants: JSON.stringify(variants), media: (finalProduct.media || []).filter(Boolean) } as Product;
+      if (isAdding) await onAdd(payload);
+      else await onEdit(payload);
+      if (onRefresh) await onRefresh();
+      setEditingId(null);
+      setIsAdding(false);
     } catch (error) {
       console.error("Gagal menyimpan produk:", error);
+      alert("Gagal menyimpan produk: " + (error instanceof Error ? error.message : String(error)));
     }
-    setEditingId(null);
-    setIsAdding(false);
   };
 
   const updateField = (field: string, value: any) => {
@@ -314,6 +315,63 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   placeholder="Tulis spesifikasi lengkap dan keunggulan produk..."
                 />
               </div>
+            </div>
+          </div>
+
+
+          {/* Data Produk & Stok */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Data Produk & Stok</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['category', 'Kategori', 'text'],
+                ['brand', 'Merek', 'text'],
+                ['price', 'Harga Normal (Rp)', 'number'],
+                ['stock_total', 'Total Stok', 'number'],
+                ['stock_sold', 'Stok Terjual', 'number']
+              ].map(([field, label, type]) => (
+                <label key={field} className="block text-[11px] font-bold text-gray-500">{label}
+                  <input type={type} min={type === 'number' ? 0 : undefined} value={(formData as any)[field] ?? ''} onChange={e => updateField(field, type === 'number' ? Number(e.target.value) : e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm" />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Varian Produk */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Varian Produk (JSON)</h2>
+            <label className="block text-[11px] font-bold text-gray-500">Warna — array objek { name, hex, imgUrl? }
+              <textarea rows={4} value={typeof formData.colors === 'string' ? formData.colors : JSON.stringify(formData.colors ?? [], null, 2)} onChange={e => updateField('colors', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-xs font-mono" />
+            </label>
+            <label className="block text-[11px] font-bold text-gray-500">Varian / Kapasitas — array objek { storage, price, sale_price }
+              <textarea rows={4} value={typeof formData.variants === 'string' ? formData.variants : JSON.stringify(formData.variants ?? [], null, 2)} onChange={e => updateField('variants', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-xs font-mono" />
+            </label>
+            <p className="text-[10px] text-gray-400">Gunakan JSON array yang valid, atau [] jika tidak ada varian.</p>
+          </div>
+
+          {/* Reputasi & Profil Toko */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Reputasi & Profil Toko</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['shop_rating', 'Rating Toko'],
+                ['shop_followers', 'Pengikut Toko'],
+                ['reviews_average', 'Rata-rata Ulasan'],
+                ['reviews_total', 'Jumlah Ulasan']
+              ].map(([field, label]) => (
+                <label key={field} className="block text-[11px] font-bold text-gray-500">{label}
+                  <input type="number" min="0" step={field.includes('rating') || field.includes('average') ? '0.1' : '1'} value={(formData as any)[field] ?? 0} onChange={e => updateField(field, Number(e.target.value))} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm" />
+                </label>
+              ))}
+              <label className="block text-[11px] font-bold text-gray-500 col-span-2">Waktu Respons
+                <input type="text" value={formData.shop_response_time ?? ''} onChange={e => updateField('shop_response_time', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm" />
+              </label>
+              <label className="block text-[11px] font-bold text-gray-500 col-span-2">URL Foto Toko
+                <input type="url" value={formData.shop_image ?? ''} onChange={e => updateField('shop_image', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm" />
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-gray-600 col-span-2">
+                <input type="checkbox" checked={Boolean(formData.shop_verified)} onChange={e => updateField('shop_verified', e.target.checked)} className="accent-green-600" /> Toko terverifikasi
+              </label>
             </div>
           </div>
 
