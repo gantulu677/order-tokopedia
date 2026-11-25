@@ -69,6 +69,15 @@ async function issueSession(account: { id: string; phone: string; role: string; 
   const token = await sign({ sub: account.id, phone: account.phone, role: account.role, exp: Date.now() + 12 * 60 * 60 * 1000 });
   return { token, profile: { id: account.id, phone: account.phone, role: account.role, name: account.name ?? null } };
 }
+function isValidProductFeatures(value: unknown): value is Array<{ label: string; value: string }> {
+  return Array.isArray(value) && value.every((feature) =>
+    feature !== null &&
+    typeof feature === "object" &&
+    !Array.isArray(feature) &&
+    typeof (feature as Record<string, unknown>).label === "string" &&
+    typeof (feature as Record<string, unknown>).value === "string"
+  );
+}
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -178,15 +187,26 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "product-create") {
+      if (!body.product || typeof body.product !== "object" || Array.isArray(body.product)) {
+        return response({ error: "Data produk tidak valid" }, 400);
+      }
       const product = { ...body.product };
-      if (!product || typeof product !== "object") return response({ error: "Data produk tidak valid" }, 400);
+      if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
+        return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
+      }
       if (account.role !== "admin") product.url = "https://www.tokopedia.com";
       const { data, error } = await db.from("produks").insert(product).select().single();
       if (error) return response({ error: error.message }, 400);
       return response({ data });
     }
     if (action === "product-update") {
+      if (!body.product || typeof body.product !== "object" || Array.isArray(body.product)) {
+        return response({ error: "Data produk tidak valid" }, 400);
+      }
       const product = { ...body.product };
+      if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
+        return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
+      }
       const id = String(product.produks_id || "");
       delete product.produks_id;
       if (!id) return response({ error: "ID produk wajib diisi" }, 400);
