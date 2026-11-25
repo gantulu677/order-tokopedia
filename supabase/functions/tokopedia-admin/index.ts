@@ -100,8 +100,11 @@ async function broadcastChatChange(phone: string) {
       await channel.send({ type: "broadcast", event: "new-message", payload: {} });
     } catch (error) {
       console.error("Livechat broadcast failed:", error);
-    } finally {
+    }
+    try {
       await db.removeChannel(channel);
+    } catch (error) {
+      console.error("Livechat channel cleanup failed:", error);
     }
   }
 }
