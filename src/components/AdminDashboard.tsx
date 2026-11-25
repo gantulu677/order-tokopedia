@@ -261,23 +261,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   if (editingId || isAdding) {
     content = (
       <div className={enableManagementTabs ? "w-full min-h-full flex flex-col bg-[#F8FAFC] relative" : "w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden"}>
-        {/* Sticky Header */}
-        <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
-          <button 
-            onClick={handleCancel} 
-            className="p-2 hover:bg-gray-50 text-gray-600 rounded-full active:scale-95 transition-all"
-          >
-            <ChevronLeft size={20} className="stroke-[2.5]" />
-          </button>
-          <div className="flex flex-col">
-            <h1 className="text-base font-black text-gray-900 tracking-tight">
-              {isAdding ? 'Tambah Produk Baru' : 'Ubah Detail Produk'}
-            </h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              {isAdding ? 'Buat item katalog baru' : `ID: ${formData.produks_id || '-'}`}
-            </p>
-          </div>
-        </header>
+        {!enableManagementTabs && (
+          {/* Sticky Header */}
+          <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
+            <button 
+              onClick={handleCancel} 
+              className="p-2 hover:bg-gray-50 text-gray-600 rounded-full active:scale-95 transition-all"
+            >
+              <ChevronLeft size={20} className="stroke-[2.5]" />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-base font-black text-gray-900 tracking-tight">
+                {isAdding ? 'Tambah Produk Baru' : 'Ubah Detail Produk'}
+              </h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                {isAdding ? 'Buat item katalog baru' : `ID: ${formData.produks_id || '-'}`}
+              </p>
+            </div>
+          </header>
+        )}
 
         {/* Scrollable Form Content */}
         <div className={enableManagementTabs ? "p-4 space-y-5 pb-24" : "content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar"}>
@@ -588,18 +590,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     content = (
       <div className="w-full h-full min-h-0 flex flex-col bg-[#FAFBFD] relative overflow-hidden">
-        <header className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-             <button onClick={() => window.location.href = '/'} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition">
-              <ChevronLeft size={18} />
-            </button>
-            <div>
-              <h1 className="text-sm font-black text-gray-900 tracking-tight leading-none mb-0.5">Katalog Admin</h1>
-              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Manage Store Items</p>
+        {!enableManagementTabs && (
+          <header className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+               <button onClick={() => window.location.href = '/'} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition">
+                <ChevronLeft size={18} />
+              </button>
+              <div>
+                <h1 className="text-sm font-black text-gray-900 tracking-tight leading-none mb-0.5">Katalog Admin</h1>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Manage Store Items</p>
+              </div>
             </div>
-          </div>
-          {!enableManagementTabs && <button onClick={handleAddNew} className="py-1.5 px-3 bg-[#00AA5B] hover:bg-[#00914d] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-sm active:scale-95 transition flex items-center gap-1"><Plus size={14} className="stroke-[3]"/><span>Tambah</span></button>}
-        </header>
+            {!enableManagementTabs && <button onClick={handleAddNew} className="py-1.5 px-3 bg-[#00AA5B] hover:bg-[#00914d] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-sm active:scale-95 transition flex items-center gap-1"><Plus size={14} className="stroke-[3]"/><span>Tambah</span></button>}
+          </header>
+        )}
 
         <main className={enableManagementTabs ? "p-3 space-y-3.5 pb-6" : "content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24"}>
           {enableManagementTabs && <button onClick={handleAddNew} className="w-full rounded-xl bg-[#00AA5B] px-4 py-3 text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2"><Plus size={15}/> Tambah Produk</button>}
