@@ -213,23 +213,9 @@ export default function App() {
         />
       } />
       <Route path="/:produks_id" element={<ProductDetail key={location.pathname} produks={produks} />} />
-      <Route path="/" element={<RootRedirect />} />
+      <Route path="/" element={<ProductDetail key="root-product" produks={produks.length > 0 ? produks : initialProduksList} />} />
     </Routes>
   );
-}
-
-function RootRedirect() {
-  const location = useLocation();
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const queryId = searchParams.get('produks_id');
-    if (!queryId) {
-      window.location.replace('https://tokopedia.com/');
-    }
-  }, [location]);
-
-  return <TokopediaSplashScreen message="Mengalihkan ke Tokopedia..." />;
 }
 
 function BadGatewayErrorPage() {

@@ -60,7 +60,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
     const fetchProductAndExternal = async () => {
       try {
         setLoading(true);
-        const externalPromise = fetch('https://opensheet.elk.sh/1nC4LmJylqWXumCX8yqNzE03dYgXaxKXIxuAY56vAk8Q/Sheet2').then(res => res.json());
+        const externalPromise = fetch('https://opensheet.elk.sh/1nC4LmJylqWXumCX8yqNzE03dYgXaxKXIxuAY56vAk8Q/Sheet2')
+          .then(res => (res.ok ? res.json() : []))
+          .catch(() => []);
         
         await new Promise(resolve => setTimeout(resolve, 600));
         
@@ -73,7 +75,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
         }
 
         const [extData] = await Promise.all([externalPromise]);
-        setExternalProducts(extData);
+        setExternalProducts(Array.isArray(extData) ? extData : []);
 
         const mappedProduct = {
           id: data.produks_id,
