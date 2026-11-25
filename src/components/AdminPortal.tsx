@@ -14,6 +14,7 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
   enableManagementTabs?: boolean;
+  produksLoading?: boolean;
 };
 type Step = 'phone' | 'register' | 'set-pin' | 'login' | 'recover';
 
@@ -42,6 +43,10 @@ export default function AdminPortal(props: Props) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [ready, setReady] = useState(false);
+  const [changePinOpen, setChangePinOpen] = useState(false);
+  const [currentPin, setCurrentPin] = useState('');
+  const [changePinValue, setChangePinValue] = useState('');
+  const [changePinConfirm, setChangePinConfirm] = useState('');
 
   const clearStoredSession = () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -150,19 +155,25 @@ export default function AdminPortal(props: Props) {
     setNotice('PIN berhasil diperbarui. Silakan login menggunakan PIN baru.');
   });
 
-  const changePin = async () => {
-    const currentPin = window.prompt('Masukkan PIN lama (6 digit):') || '';
-    if (!currentPin) return;
-    const nextPin = window.prompt('Masukkan PIN baru (6 digit):') || '';
-    if (!/^\d{6}$/.test(nextPin)) {
-      window.alert('PIN baru harus tepat 6 digit');
-      return;
-    }
+  const changePin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
     try {
-      await adminApi('change-pin', { currentPin, newPin: nextPin });
-      window.alert('PIN berhasil diperbarui.');
+      if (!/^\\d{6}$/.test(currentPin)) throw new Error('PIN lama harus tepat 6 digit');
+      if (!/^\\d{6}$/.test(changePinValue)) throw new Error('PIN baru harus tepat 6 digit');
+      if (changePinValue !== changePinConfirm) throw new Error('Konfirmasi PIN tidak sama');
+      await adminApi('change-pin', { currentPin, newPin: changePinValue });
+      setCurrentPin('');
+      setChangePinValue('');
+      setChangePinConfirm('');
+      setChangePinOpen(false);
+      setNotice('PIN berhasil diperbarui.');
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Gagal mengubah PIN');
+      setError(e instanceof Error ? e.message : 'Gagal mengubah PIN');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -209,15 +220,33 @@ export default function AdminPortal(props: Props) {
         : isProducts ? <AdminDashboard {...props} role={profile.role}/>
         : isBank || isLiveChat ? <AdminManagement tab={activeTab as 'bank' | 'livechat'} role={profile.role} phone={profile.phone}/>
         : <section className="mx-auto w-full max-w-2xl space-y-4 p-4">
+            {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600">{error}</p>}
+            {notice && <p role="status" className="rounded-xl border border-green-100 bg-green-50 p-3 text-xs font-medium text-green-700">{notice}</p>}
             <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-base font-black text-gray-900">Profil Akun</h2><dl className="mt-4 space-y-4 text-sm">
               <div><dt className="text-xs font-semibold text-gray-400">Nama</dt><dd className="mt-1 font-bold text-gray-800">{profile.name || 'Belum diatur'}</dd></div>
               <div><dt className="text-xs font-semibold text-gray-400">Nomor Telepon</dt><dd className="mt-1 font-bold text-gray-800">+{profile.phone}</dd></div>
               <div><dt className="text-xs font-semibold text-gray-400">Role</dt><dd className="mt-1 font-bold capitalize text-gray-800">{profile.role}</dd></div>
             </dl></div>
             <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-sm font-black text-gray-900">Pengaturan Akun</h2>
-              <button onClick={() => void changePin()} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left text-sm font-bold text-gray-700"><KeyRound size={17}/> Ganti PIN</button>
+              <button type="button" onClick={() => { setChangePinOpen(true); setError(''); setNotice(''); }} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left text-sm font-bold text-gray-700"><KeyRound size={17}/> Ganti PIN</button>
               <button onClick={logout} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-red-100 p-3 text-left text-sm font-bold text-red-600"><LogOut size={17}/> Logout</button>
             </div>
+            {changePinOpen && <form onSubmit={changePin} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-3">
+              <h3 className="text-sm font-black text-gray-900">Perbarui PIN</h3>
+              <label className="block text-xs font-semibold text-gray-600">PIN Lama
+                <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} value={currentPin} onChange={event => setCurrentPin(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+              </label>
+              <label className="block text-xs font-semibold text-gray-600">PIN Baru
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinValue} onChange={event => setChangePinValue(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+              </label>
+              <label className="block text-xs font-semibold text-gray-600">Konfirmasi PIN Baru
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinConfirm} onChange={event => setChangePinConfirm(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="Ulangi 6 digit PIN baru" />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => { setChangePinOpen(false); setCurrentPin(''); setChangePinValue(''); setChangePinConfirm(''); setError(''); }} className="flex-1 rounded-xl border border-gray-200 p-3 text-xs font-bold text-gray-600 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={busy} className="flex-1 rounded-xl bg-[#00AA5B] p-3 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Menyimpan...' : 'Simpan PIN'}</button>
+              </div>
+            </form>}
           </section>}
       </main>
       <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
