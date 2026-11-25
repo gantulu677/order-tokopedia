@@ -117,7 +117,9 @@ Deno.serve(async (req: Request) => {
       if (!account) return response({ error: "Akun tidak ditemukan atau kredensial salah" }, 401);
 
       if (action === "pin-login") {
-        if (!await verifySecret(String(body.pin || ""), account.pin)) {
+        const submittedPin = String(body.pin || "");
+        if (!/^\\d{6}$/.test(submittedPin)) return response({ error: "PIN harus tepat 6 digit" }, 400);
+        if (!await verifySecret(submittedPin, account.pin)) {
           return response({ error: "PIN salah atau belum dibuat" }, 401);
         }
         return response(await issueSession(account));
