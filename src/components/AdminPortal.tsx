@@ -181,10 +181,10 @@ export default function AdminPortal(props: Props) {
     setNotice('');
   };
 
-  if (!ready) return <div className="min-h-full flex items-center justify-center text-sm text-gray-500">Memulihkan sesi admin...</div>;
+  if (!ready) return <div className="w-full h-full min-h-full flex flex-col items-center justify-center text-sm text-gray-500">Memulihkan sesi admin...</div>;
 
   if (profile) return (
-    <div className="relative w-full h-full min-h-full">
+    <div className="relative w-full h-full min-h-full flex flex-col">
       <div className="absolute top-3 right-3 z-30 flex gap-2">
         <button onClick={changePin} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><KeyRound size={14}/> Ubah PIN</button>
         <button onClick={logout} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><LogOut size={14}/> Keluar</button>
@@ -210,7 +210,7 @@ export default function AdminPortal(props: Props) {
   };
 
   return (
-    <div className="min-h-full bg-slate-950 flex items-center justify-center p-4 font-sans">
+    <div className="w-full h-full min-h-full bg-slate-950 flex flex-col items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-3xl p-7 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mb-3"><LockKeyhole size={28}/></div>
