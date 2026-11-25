@@ -21,7 +21,7 @@ function TokopediaSplashScreen({ message }: { message: string }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-between p-8 font-sans max-w-md mx-auto shadow-2xl border-x border-gray-100">
+    <div className="min-h-full bg-white flex flex-col items-center justify-between p-8 font-sans max-w-md mx-auto shadow-2xl border-x border-gray-100">
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         <div className="w-56 h-56 flex items-center justify-center relative">
           {/* Authentic green spinning loader as placeholder/fallback */}
@@ -241,7 +241,7 @@ function BadGatewayErrorPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-[#374151] font-sans flex flex-col justify-between p-6 sm:p-12">
+    <div className="min-h-full bg-[#F9FAFB] text-[#374151] font-sans flex flex-col justify-between p-6 sm:p-12">
       <div className="max-w-4xl mx-auto w-full pt-6 sm:pt-12">
         {/* Error Code & Large Header */}
         <div className="border-b border-gray-200 pb-8">
