@@ -149,7 +149,7 @@ export default function IsBlocked() {
   };
 
   return (
-    <div id="is-blocked-page" className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-12">
+    <div id="is-blocked-page" className="min-h-full bg-[#F8FAFC] text-slate-800 pb-12">
       {/* Header Banner */}
       <header id="blocked-header" className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div id="header-container" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
