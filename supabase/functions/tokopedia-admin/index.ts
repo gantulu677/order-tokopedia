@@ -78,6 +78,27 @@ function isValidProductFeatures(value: unknown): value is Array<{ label: string;
     typeof (feature as Record<string, unknown>).value === "string"
   );
 }
+function validateProductNumbers(product: Record<string, unknown>) {
+  const numericFields = ["price", "sale_price", "stock_total", "stock_sold"] as const;
+  const parsed: Partial<Record<typeof numericFields[number], number>> = {};
+  for (const field of numericFields) {
+    if (!Object.prototype.hasOwnProperty.call(product, field)) continue;
+    const value = product[field];
+    if ((typeof value !== "number" && typeof value !== "string") || String(value).trim() === "") {
+      return `${field} harus berupa angka yang valid.`;
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) return `${field} tidak boleh negatif dan harus berupa angka valid.`;
+    if ((field === "stock_total" || field === "stock_sold") && !Number.isInteger(number)) {
+      return `${field} harus berupa bilangan bulat.`;
+    }
+    parsed[field] = number;
+  }
+  if (parsed.stock_total !== undefined && parsed.stock_sold !== undefined && parsed.stock_sold > parsed.stock_total) {
+    return "Stok terjual tidak boleh melebihi total stok.";
+  }
+  return null;
+}
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -322,6 +343,8 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Data produk tidak valid" }, 400);
       }
       const product = { ...body.product };
+      const numberError = validateProductNumbers(product);
+      if (numberError) return response({ error: numberError }, 400);
       if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
         return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
       }
@@ -335,6 +358,8 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Data produk tidak valid" }, 400);
       }
       const product = { ...body.product };
+      const numberError = validateProductNumbers(product);
+      if (numberError) return response({ error: numberError }, 400);
       if (Object.prototype.hasOwnProperty.call(product, "features") && !isValidProductFeatures(product.features)) {
         return response({ error: "Fitur produk harus berupa array Label dan Value." }, 400);
       }
