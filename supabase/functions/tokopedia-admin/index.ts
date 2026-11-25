@@ -116,6 +116,27 @@ Deno.serve(async (req: Request) => {
       return response({ success: true });
     }
 
+    if (action === "upload-image") {
+      const fileType = String(body.fileType || "");
+      const fileBase64 = String(body.fileBase64 || "");
+      const allowedTypes: Record<string, string> = {
+        "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+        "image/gif": "gif", "image/avif": "avif"
+      };
+      if (!allowedTypes[fileType]) return response({ error: "Format gambar tidak didukung" }, 400);
+      if (!fileBase64 || fileBase64.length > 11_200_000) return response({ error: "Ukuran gambar maksimal 8 MB" }, 400);
+      const binary = atob(fileBase64);
+      if (binary.length > 8 * 1024 * 1024) return response({ error: "Ukuran gambar maksimal 8 MB" }, 400);
+      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+      const path = "products/" + account.id + "/" + crypto.randomUUID() + "." + allowedTypes[fileType];
+      const { data, error } = await db.storage.from("images").upload(path, bytes, {
+        contentType: fileType, cacheControl: "3600", upsert: false
+      });
+      if (error) return response({ error: error.message }, 400);
+      const { data: publicData } = db.storage.from("images").getPublicUrl(data.path);
+      return response({ path: data.path, publicUrl: publicData.publicUrl });
+    }
+
     if (action === "product-create") {
       const product = { ...body.product };
       if (!product || typeof product !== "object") return response({ error: "Data produk tidak valid" }, 400);
