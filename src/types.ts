@@ -1,7 +1,7 @@
-export interface Product {
+export interface ProductFeature {\n  label: string;\n  value: string;\n}\n\nexport const createDefaultProductFeatures = (): ProductFeature[] => [\n  { label: 'Kondisi', value: 'Bekas' },\n  { label: 'Etalase', value: '' },\n];\n\nexport interface Product {
   produks_id: string;
   title: string;
-  description: string;
+  description: string;\n  features: ProductFeature[];
   category: string;
   brand: string;
   media: string[];
