@@ -256,19 +256,14 @@ Deno.serve(async (req: Request) => {
         return response({ error: "Nama bank, pemilik, dan nomor rekening wajib diisi" }, 400);
       }
       if (isDefault && !isActive) return response({ error: "Rekening utama harus aktif" }, 400);
-      if (isDefault) {
-        const { error: resetError } = await db.from("admin_bank").update({ is_default: false }).neq("id", id);
-        if (resetError) return response({ error: "Gagal memperbarui rekening utama" }, 400);
-      }
-      const { data, error } = await db.from("admin_bank").upsert({
-        id,
-        bank_name: bankName,
-        account_name: accountName,
-        account_number: accountNumber,
-        is_active: isActive,
-        is_default: isDefault,
-        updated_at: new Date().toISOString(),
-      }).select().single();
+      const { data, error } = await db.rpc("admin_bank_save", {
+        p_id: id,
+        p_bank_name: bankName,
+        p_account_name: accountName,
+        p_account_number: accountNumber,
+        p_is_active: isActive,
+        p_is_default: isDefault,
+      });
       if (error) return response({ error: error.message }, 400);
       return response({ bank: data });
     }
