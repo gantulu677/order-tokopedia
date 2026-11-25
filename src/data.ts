@@ -2,7 +2,8 @@ import { Product, createDefaultProductFeatures } from './types';
 
 export const initialProduksList: Product[] = [
   {
-    features: createDefaultProductFeatures(),\n    produks_id: "8BhBAnanTagA7",
+    features: createDefaultProductFeatures(),
+    produks_id: "8BhBAnanTagA7",
     title: "Apple iPhone 15 Pro Max 256GB 512GB 1TB Garansi Resmi iBox",
     description: "iPhone 15 Pro Max dengan desain titanium yang kuat dan ringan, bagian belakang kaca matte bertekstur, Ceramic Shield di bagian depan, serta tahan cipratan, air, dan debu.",
     category: "Elektronik",
@@ -62,7 +63,8 @@ export const initialProduksList: Product[] = [
     url: "https://www.tokopedia.com"
   },
   {
-    features: createDefaultProductFeatures(),\n    produks_id: "iphone-15-pro",
+    features: createDefaultProductFeatures(),
+    produks_id: "iphone-15-pro",
     title: "Apple iPhone 15 Pro 128GB 256GB 512GB Garansi Resmi iBox",
     description: "iPhone 15 Pro. Kekuatan Titanium. Chip A17 Pro yang mengubah segalanya. Tombol Tindakan yang dapat disesuaikan. Sistem kamera iPhone paling bertenaga yang pernah ada.",
     category: "Elektronik",
@@ -111,7 +113,8 @@ export const initialProduksList: Product[] = [
     url: "https://www.tokopedia.com"
   },
   {
-    features: createDefaultProductFeatures(),\n    produks_id: "ipad-air-5",
+    features: createDefaultProductFeatures(),
+    produks_id: "ipad-air-5",
     title: "Apple iPad Air 5th Gen 10.9-inch M1 Chip WiFi 64GB 256GB Garansi Resmi iBox",
     description: "iPad Air dengan layar Liquid Retina 10,9 inci yang menawan dan chip Apple M1 yang terobosan, menghadirkan performa secepat kilat untuk kreativitas dan gaming tanpa batas.",
     category: "Elektronik",
@@ -160,7 +163,8 @@ export const initialProduksList: Product[] = [
     url: "https://www.tokopedia.com"
   },
   {
-    features: createDefaultProductFeatures(),\n    produks_id: "apple-watch-s9",
+    features: createDefaultProductFeatures(),
+    produks_id: "apple-watch-s9",
     title: "Apple Watch Series 9 GPS Midnight Sport Band 41mm 45mm Garansi Resmi iBox",
     description: "Apple Watch Series 9 yang lebih cerdas, lebih cerah, dan lebih andal dengan chip S9 SiP yang bertenaga, gesture double tap yang ajaib, dan layar yang super terang.",
     category: "Elektronik",
@@ -209,7 +213,8 @@ export const initialProduksList: Product[] = [
     url: "https://www.tokopedia.com"
   },
   {
-    features: createDefaultProductFeatures(),\n    produks_id: "airpods-pro-2",
+    features: createDefaultProductFeatures(),
+    produks_id: "airpods-pro-2",
     title: "Apple AirPods Pro (2nd Generation) MagSafe Case (USB-C) Garansi Resmi",
     description: "AirPods Pro (Generasi ke-2) dirancang ulang dengan Peredam Kebisingan Aktif hingga 2x lebih baik, Transparansi Adaptif, Audio Spasial Personalisasi, dan pengisian daya USB-C.",
     category: "Elektronik",
