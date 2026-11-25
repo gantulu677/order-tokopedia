@@ -141,6 +141,7 @@ Deno.serve(async (req: Request) => {
       return response({ data });
     }
     if (action === "product-delete") {
+      if (account.role !== "admin") return response({ error: "Hanya admin yang dapat menghapus produk" }, 403);
       const id = String(body.produks_id || "");
       if (!id) return response({ error: "ID produk wajib diisi" }, 400);
       const { error } = await db.from("produks").delete().eq("produks_id", id);
