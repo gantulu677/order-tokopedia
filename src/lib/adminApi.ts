@@ -1,5 +1,4 @@
-const SUPABASE_URL = 'https://bkyqbbigfvfaobblxziu.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_HIzGXC7XaboKJQzF8sztiQ_Qoh4B4Gr';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './supabase';
 
 export function normalizePhone(value: string): string {
   let digits = String(value || '').replace(/\D/g, '');
@@ -14,7 +13,7 @@ export async function adminApi<T = any>(action: string, payload: Record<string, 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      apikey: SUPABASE_KEY,
+      apikey: SUPABASE_PUBLISHABLE_KEY,
       ...(savedToken ? { Authorization: `Bearer ${savedToken}` } : {}),
     },
     body: JSON.stringify({ action, ...payload }),
@@ -31,7 +30,7 @@ export async function adminUploadImage(file: File): Promise<{ path: string; publ
   form.append('file', file);
   const response = await fetch(`${SUPABASE_URL}/functions/v1/tokopedia-admin`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
     body: form,
   });
   const result = await response.json().catch(() => ({}));
