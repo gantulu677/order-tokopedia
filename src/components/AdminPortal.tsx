@@ -14,7 +14,6 @@ type Props = {
 };
 
 const PHONE_KEY = 'tokopedia_admin_phone';
-const PIN_KEY = 'tokopedia_admin_pin';
 const TOKEN_KEY = 'tokopedia_admin_token';
 const PROFILE_KEY = 'tokopedia_admin_profile';
 
@@ -32,8 +31,6 @@ export default function AdminPortal(props: Props) {
   const [ready, setReady] = useState(false);
 
   const applySession = (result: any) => {
-    const previousPhone = localStorage.getItem(PHONE_KEY);
-    if (previousPhone !== result.profile.phone) localStorage.removeItem(PIN_KEY);
     localStorage.setItem(PHONE_KEY, result.profile.phone);
     localStorage.setItem(TOKEN_KEY, result.token);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile));
@@ -44,19 +41,12 @@ export default function AdminPortal(props: Props) {
   useEffect(() => {
     let active = true;
     const restore = async () => {
+      // Never persist or replay a PIN from browser storage.
+      // A fresh password login is required when the page is reopened.
       const savedPhone = localStorage.getItem(PHONE_KEY);
-      const savedPin = localStorage.getItem(PIN_KEY);
-      if (savedPhone && savedPin) {
-        try {
-          const result = await adminApi('pin-login', { phone: savedPhone, pin: savedPin }, '');
-          if (active) applySession(result);
-        } catch {
-          localStorage.removeItem(PIN_KEY);
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(PROFILE_KEY);
-          if (active) setPhone(savedPhone);
-        }
-      }
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(PROFILE_KEY);
+      if (active && savedPhone) setPhone(savedPhone);
       if (active) setReady(true);
     };
     restore();
@@ -73,7 +63,6 @@ export default function AdminPortal(props: Props) {
         if (!/^\d{6}$/.test(pin)) throw new Error('PIN harus tepat 6 digit');
         const result = await adminApi('register', { phone: normalizedPhone, password, pin }, '');
         localStorage.setItem(PHONE_KEY, normalizedPhone);
-        localStorage.setItem(PIN_KEY, pin);
         applySession(result);
       } else {
         const result = await adminApi('login', { phone: normalizedPhone, password }, '');
@@ -99,7 +88,6 @@ export default function AdminPortal(props: Props) {
       await adminApi('set-pin', { newPin }, pendingToken);
       const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
       localStorage.setItem(PHONE_KEY, normalizePhone(phone));
-      localStorage.setItem(PIN_KEY, newPin);
       applySession(result);
       setPinSetup(false);
     } catch (e) {
@@ -114,7 +102,6 @@ export default function AdminPortal(props: Props) {
     if (!/^\d{6}$/.test(nextPin)) { window.alert('PIN baru harus tepat 6 digit'); return; }
     try {
       await adminApi('change-pin', { currentPin, newPin: nextPin });
-      localStorage.setItem(PIN_KEY, nextPin);
       window.alert('PIN berhasil diperbarui.');
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Gagal mengubah PIN');
@@ -171,7 +158,7 @@ export default function AdminPortal(props: Props) {
           </form>
         )}
         {error && pinSetup && <p className="text-xs text-red-600 bg-red-50 rounded-lg p-3 mt-3">{error}</p>}
-        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> PIN tersimpan di perangkat ini untuk login berikutnya</div>
+        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> PIN diverifikasi di server dan tidak disimpan di browser</div>
       </div>
     </div>
   );
