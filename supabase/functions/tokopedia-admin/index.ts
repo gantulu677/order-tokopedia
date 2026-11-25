@@ -81,6 +81,30 @@ function isValidProductFeatures(value: unknown): value is Array<{ label: string;
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
+async function chatConversationTopicId(phone: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(serviceKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode("admin-chat:" + phone)));
+  return b64url(signature);
+}
+async function broadcastChatChange(phone: string) {
+  const topics = ["admin-chat-room-" + await chatConversationTopicId(phone), "admin-chat-admin"];
+  for (const topic of topics) {
+    const channel = db.channel(topic);
+    try {
+      await channel.send({ type: "broadcast", event: "new-message", payload: {} });
+    } catch (error) {
+      console.error("Livechat broadcast failed:", error);
+    } finally {
+      await db.removeChannel(channel);
+    }
+  }
+}
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return response({ error: "Method not allowed" }, 405);
@@ -184,6 +208,113 @@ Deno.serve(async (req: Request) => {
       if (error) return response({ error: error.message }, 400);
       const { data: publicData } = db.storage.from("images").getPublicUrl(data.path);
       return response({ path: data.path, publicUrl: publicData.publicUrl });
+    }
+
+    if (action === "bank-list") {
+      let query = db.from("admin_bank").select("*").order("is_default", { ascending: false }).order("bank_name");
+      if (account.role !== "admin") query = query.eq("is_active", true);
+      const { data, error } = await query;
+      if (error) return response({ error: "Gagal memuat rekening bank" }, 400);
+      return response({ banks: data || [] });
+    }
+
+    if (action === "bank-save") {
+      if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
+      if (!body.bank || typeof body.bank !== "object" || Array.isArray(body.bank)) {
+        return response({ error: "Data rekening tidak valid" }, 400);
+      }
+      const bank = body.bank as Record<string, unknown>;
+      const id = String(bank.id || "").trim();
+      const bankName = String(bank.bank_name || "").trim();
+      const accountName = String(bank.account_name || "").trim();
+      const accountNumber = String(bank.account_number || "").trim();
+      const isActive = bank.is_active !== false;
+      const isDefault = bank.is_default === true;
+      if (!id || !bankName || !accountName || !accountNumber) {
+        return response({ error: "Nama bank, pemilik, dan nomor rekening wajib diisi" }, 400);
+      }
+      if (isDefault && !isActive) return response({ error: "Rekening utama harus aktif" }, 400);
+      if (isDefault) {
+        const { error: resetError } = await db.from("admin_bank").update({ is_default: false }).neq("id", id);
+        if (resetError) return response({ error: "Gagal memperbarui rekening utama" }, 400);
+      }
+      const { data, error } = await db.from("admin_bank").upsert({
+        id,
+        bank_name: bankName,
+        account_name: accountName,
+        account_number: accountNumber,
+        is_active: isActive,
+        is_default: isDefault,
+        updated_at: new Date().toISOString(),
+      }).select().single();
+      if (error) return response({ error: error.message }, 400);
+      return response({ bank: data });
+    }
+
+    if (action === "bank-delete") {
+      if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
+      const id = String(body.id || "").trim();
+      if (!id) return response({ error: "ID rekening wajib diisi" }, 400);
+      const { error } = await db.from("admin_bank").delete().eq("id", id);
+      if (error) return response({ error: error.message }, 400);
+      return response({ success: true });
+    }
+
+    if (action === "chat-list-conversations") {
+      if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
+      const { data, error } = await db.from("admin_chat")
+        .select("phone,role,message,created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) return response({ error: "Gagal memuat daftar percakapan" }, 400);
+      const seen = new Set<string>();
+      const conversations = [];
+      for (const row of data || []) {
+        if (seen.has(row.phone)) continue;
+        seen.add(row.phone);
+        conversations.push({
+          phone: row.phone,
+          lastMessage: row.message,
+          lastRole: row.role,
+          createdAt: row.created_at,
+        });
+      }
+      return response({ conversations });
+    }
+
+    if (action === "chat-get-messages") {
+      const targetPhone = account.role === "admin"
+        ? normalizePhone(String(body.phone || ""))
+        : account.phone;
+      if (!validPhone(targetPhone)) return response({ error: "Nomor percakapan tidak valid" }, 400);
+      const { data, error } = await db.from("admin_chat")
+        .select("id,phone,role,message,created_at")
+        .eq("phone", targetPhone)
+        .order("created_at", { ascending: true })
+        .limit(500);
+      if (error) return response({ error: "Gagal memuat pesan" }, 400);
+      return response({
+        conversationId: await chatConversationTopicId(targetPhone),
+        messages: data || [],
+      });
+    }
+
+    if (action === "chat-send-message") {
+      const targetPhone = account.role === "admin"
+        ? normalizePhone(String(body.phone || ""))
+        : account.phone;
+      const message = String(body.message || "").trim();
+      if (!validPhone(targetPhone)) return response({ error: "Nomor percakapan tidak valid" }, 400);
+      if (!message || message.length > 2000) return response({ error: "Pesan wajib diisi dan maksimal 2000 karakter" }, 400);
+      const { data, error } = await db.from("admin_chat").insert({
+        conversation_id: targetPhone,
+        phone: targetPhone,
+        role: account.role,
+        message,
+      }).select("id,phone,role,message,created_at").single();
+      if (error) return response({ error: "Gagal mengirim pesan" }, 400);
+      await broadcastChatChange(targetPhone);
+      return response({ message: data });
     }
 
     if (action === "product-create") {
