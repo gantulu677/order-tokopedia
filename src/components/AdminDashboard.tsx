@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Trash2, 
@@ -46,7 +47,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRefresh,
   role
 }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [routeNotFound, setRouteNotFound] = useState(false);
+  const initializedRoute = useRef('');
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [seeding, setSeeding] = useState(false);
@@ -135,17 +140,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     url: 'https://www.tokopedia.com'
   };
 
-  const handleEdit = (product: Product) => {
+  useEffect(() => {
+    const path = location.pathname.replace(/\/$/, '');
+    if (!path.startsWith('/admin/produks/')) {
+      initializedRoute.current = ''; setEditingId(null); setIsAdding(false); setRouteNotFound(false); return;
+    }
+    if (initializedRoute.current === path) return;
+    initializedRoute.current = path; setRouteNotFound(false);
+    if (path === '/admin/produks/new') {
+      setFormData({ ...emptyProduct, produks_id: generateProdukId() }); setIsAdding(true); setEditingId(null); return;
+    }
+    const productId = decodeURIComponent(path.slice('/admin/produks/'.length));
+    const product = produks.find(item => item.produks_id === productId);
+    if (!product) { setEditingId(null); setIsAdding(false); setRouteNotFound(true); return; }
     setFormData({ ...product, features: Array.isArray(product.features) ? product.features : createDefaultProductFeatures() });
-    setEditingId(product.produks_id);
-    setIsAdding(false);
-  };
+    setEditingId(product.produks_id); setIsAdding(false);
+  }, [location.pathname, produks]);
 
-  const handleAddNew = () => {
-    setFormData({ ...emptyProduct, produks_id: generateProdukId() });
-    setIsAdding(true);
-    setEditingId(null);
-  };
+  const handleEdit = (product: Product) => { navigate('/admin/produks/' + encodeURIComponent(product.produks_id)); };
+  const handleAddNew = () => { navigate('/admin/produks/new'); };
 
   const [uploading, setUploading] = useState(false);
 
@@ -209,9 +222,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       } as Product;
       if (isAdding) await onAdd(payload);
       else await onEdit(payload);
-      if (onRefresh) await onRefresh();
-      setEditingId(null);
-      setIsAdding(false);
+      navigate('/admin');
     } catch (error) {
       console.error("Gagal menyimpan produk:", error);
       alert("Gagal menyimpan produk: " + (error instanceof Error ? error.message : String(error)));
@@ -237,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Sticky Header */}
         <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
           <button 
-            onClick={() => { setEditingId(null); setIsAdding(false); }} 
+            onClick={() => navigate('/admin')} 
             className="p-2 hover:bg-gray-50 text-gray-600 rounded-full active:scale-95 transition-all"
           >
             <ChevronLeft size={20} className="stroke-[2.5]" />
@@ -571,13 +582,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Manage Store Items</p>
             </div>
           </div>
-          <button onClick={handleAddNew} className="py-1.5 px-3 bg-[#00AA5B] hover:bg-[#00914d] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-sm active:scale-95 transition flex items-center gap-1">
-            <Plus size={14} className="stroke-[3]" />
-            <span>Tambah</span>
-          </button>
+
         </header>
 
         <main className="content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24">
+          <button onClick={handleAddNew} className="w-full rounded-xl bg-[#00AA5B] px-4 py-3 text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2"><Plus size={15}/> Tambah Produk</button>
           {/* Dashboard KPI Banner */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.01)] overflow-hidden">
             <div className="grid grid-cols-2 divide-x divide-gray-50">
@@ -727,49 +736,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   }
 
-  return (
-    <div className="w-full h-full min-h-full flex flex-col items-center justify-center bg-slate-950 md:bg-[#0B0F19] font-sans relative antialiased selection:bg-[#00AA5B]/20">
-      {/* Premium background light glow on desktop */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-green-500/10 blur-[120px]" />
-        <div className="absolute top-1/2 right-10 w-80 h-80 rounded-full bg-emerald-500/10 blur-[100px]" />
-      </div>
-
-      {/* Main smartphone device frame mockup on desktop, full-screen on mobile */}
-      <div className="w-full h-full min-h-0 md:max-w-[412px] bg-white md:rounded-[48px] md:border-[12px] md:border-slate-900 md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden transition-all duration-300 md:ring-1 md:ring-white/10">
-        
-        {/* Dynamic Notch / Island on desktop */}
-        <div className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-2xl z-50 items-center justify-center pointer-events-none">
-          <div className="w-2 h-2 rounded-full bg-slate-950 mr-2 border border-white/5" />
-          <div className="w-12 h-1 bg-slate-950 rounded-full" />
-        </div>
-
-        {/* Dynamic status bar for authentic mobile experience */}
-        <div className="flex-shrink-0 px-6 pt-3 pb-1 flex justify-between items-center text-[11px] font-black text-gray-500 bg-white select-none z-40 border-b border-gray-50">
-          <span>09:41</span>
-          <div className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.79-1.79C9.09 19.63 10.51 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
-            </svg>
-            <span className="text-[9px] font-bold">5G</span>
-            <div className="w-5 h-2.5 border border-gray-400 rounded-sm p-0.5 flex items-center">
-              <div className="h-full w-3.5 bg-gray-500 rounded-[1px]" />
-            </div>
-          </div>
-        </div>
-
-        {/* Device content space */}
-        <div className="min-h-0 flex-1 flex flex-col relative overflow-hidden bg-slate-50">
-          {content}
-        </div>
-
-        {/* Bottom virtual home indicator on desktop */}
-        <div className="hidden md:flex flex-shrink-0 h-4 bg-white items-center justify-center select-none z-40">
-          <div className="w-28 h-1 bg-gray-300 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
+  if (routeNotFound) return <div className="w-full min-h-full p-8 text-center"><h2 className="text-base font-black text-gray-900">Produk tidak ditemukan</h2><p className="mt-2 text-sm text-gray-500">Produk dengan ID tersebut tidak tersedia.</p><button onClick={() => navigate('/admin')} className="mt-4 rounded-xl bg-[#00AA5B] px-4 py-2 text-sm font-bold text-white">Kembali ke Produk</button></div>;
+  return <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC]">{content}</div>;
 };
 
 export default AdminDashboard;

@@ -222,7 +222,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "bank-save") {
-      if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
       if (!body.bank || typeof body.bank !== "object" || Array.isArray(body.bank)) {
         return response({ error: "Data rekening tidak valid" }, 400);
       }
@@ -255,7 +254,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "bank-delete") {
-      if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
       const id = String(body.id || "").trim();
       if (!id) return response({ error: "ID rekening wajib diisi" }, 400);
       const { error } = await db.from("admin_bank").delete().eq("id", id);

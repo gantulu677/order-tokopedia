@@ -208,19 +208,19 @@ export default function AdminManagement({ tab, role, phone }: Props) {
             <h1 className="text-lg font-black text-gray-900">Rekening Bank</h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {role === 'admin' ? 'Kelola rekening pembayaran.' : 'Pilih rekening tujuan pembayaran.'}
+            Kelola rekening pembayaran.
           </p>
         </header>
 
         <main className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           {bankError && <p className="rounded-xl bg-red-50 text-red-600 p-3 text-xs">{bankError}</p>}
-          {role === 'admin' && !bankDraft && (
+          {!bankDraft && (
             <button onClick={() => setBankDraft(emptyBank())} className="w-full rounded-xl bg-[#00AA5B] text-white p-3 text-sm font-bold flex items-center justify-center gap-2">
               <Plus size={16} /> Tambah Rekening
             </button>
           )}
 
-          {bankDraft && role === 'admin' && (
+          {bankDraft && (
             <section className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-sm">{bankDraft.id ? 'Ubah Rekening' : 'Rekening Baru'}</h2>
@@ -266,12 +266,11 @@ export default function AdminManagement({ tab, role, phone }: Props) {
                   <p className="mt-2 text-sm font-bold tracking-wide text-gray-800">{bank.account_number}</p>
                   <p className="text-xs text-gray-500">{bank.account_name}</p>
                 </div>
-                {role === 'admin' && (
-                  <div className="flex gap-1">
+                <div className="flex gap-1">
                     <button onClick={() => setBankDraft(bank)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Ubah rekening"><Pencil size={15}/></button>
                     <button onClick={() => void deleteBank(bank.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label="Hapus rekening"><Trash2 size={15}/></button>
                   </div>
-                )}
+                </div>
               </div>
             </article>
           ))}

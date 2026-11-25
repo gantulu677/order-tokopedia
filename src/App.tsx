@@ -196,7 +196,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/is-blocked" element={<IsBlocked />} />
-      <Route path="/admin" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} enableManagementTabs />} />
+      <Route path="/admin/*" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} enableManagementTabs />} />
       <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
       <Route path="/checkout" element={
         <Checkout 

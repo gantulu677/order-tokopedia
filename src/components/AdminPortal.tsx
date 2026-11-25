@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, KeyRound, LockKeyhole, LogOut, ShieldCheck, Package, Landmark, MessageCircle } from 'lucide-react';
 import AdminDashboard from './AdminDashboard';
 import AdminManagement from './AdminManagement';
@@ -25,7 +26,10 @@ const buttonClass = 'w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold dis
 
 export default function AdminPortal(props: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [activeTab, setActiveTab] = useState<'produk' | 'bank' | 'livechat'>('produk');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentPath = location.pathname.replace(/\/$/, '') || '/admin';
+  const activeTab = currentPath === '/admin/bank' ? 'bank' : currentPath === '/admin/live-chat' ? 'livechat' : currentPath === '/admin' || currentPath.startsWith('/admin/produks/') ? 'produk' : null;
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState(localStorage.getItem(PHONE_KEY) || '');
   const [name, setName] = useState('');
@@ -186,32 +190,43 @@ export default function AdminPortal(props: Props) {
 
   if (!ready) return <div className="w-full h-full min-h-full flex flex-col items-center justify-center text-sm text-gray-500">Memulihkan sesi admin...</div>;
 
-  if (profile) return (
-    <div className="relative w-full h-full min-h-full flex flex-col bg-white">
-      <div className="absolute top-3 right-3 z-30 flex gap-2">
-        <button onClick={changePin} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><KeyRound size={14}/> Ubah PIN</button>
-        <button onClick={logout} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><LogOut size={14}/> Keluar</button>
-      </div>
-      <main className="min-h-0 flex-1">
-        {activeTab === 'produk' || !props.enableManagementTabs
-          ? <AdminDashboard {...props} role={profile.role} />
-          : <AdminManagement tab={activeTab} role={profile.role} phone={profile.phone} />}
+  if (profile) {
+    if (!props.enableManagementTabs) {
+      return <div className="w-full h-full min-h-full flex flex-col bg-white"><main className="min-h-0 flex-1"><AdminDashboard {...props} role={profile.role} /></main></div>;
+    }
+    const isProducts = currentPath === '/admin' || currentPath === '/admin/produks/new' || /^\/admin\/produks\/[^/]+$/.test(currentPath);
+    const isProfile = currentPath === '/admin/profile';
+    const isBank = currentPath === '/admin/bank';
+    const isLiveChat = currentPath === '/admin/live-chat';
+    const isKnownRoute = isProducts || isProfile || isBank || isLiveChat;
+    return <div className="w-full h-full min-h-full flex flex-col bg-[#F8FAFC]">
+      <header className="shrink-0 flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">Admin Dashboard</h1></div>
+        <button type="button" onClick={() => navigate('/admin/profile')} className={'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ' + (isProfile ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600')} aria-current={isProfile ? 'page' : undefined}><ShieldCheck size={15}/> Profil</button>
+      </header>
+      <main className="content-admin min-h-0 flex-1 overflow-y-auto">
+        {!isKnownRoute ? <div className="p-8 text-center"><h2 className="text-lg font-black text-gray-900">Halaman Admin Tidak Ditemukan</h2><p className="mt-2 text-sm text-gray-500">Alamat halaman yang dibuka tidak tersedia.</p><button onClick={() => navigate('/admin')} className="mt-4 rounded-xl bg-[#00AA5B] px-4 py-2 text-sm font-bold text-white">Kembali ke Produk</button></div>
+        : isProducts ? <AdminDashboard {...props} role={profile.role}/>
+        : isBank || isLiveChat ? <AdminManagement tab={activeTab as 'bank' | 'livechat'} role={profile.role} phone={profile.phone}/>
+        : <section className="mx-auto w-full max-w-2xl space-y-4 p-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-base font-black text-gray-900">Profil Akun</h2><dl className="mt-4 space-y-4 text-sm">
+              <div><dt className="text-xs font-semibold text-gray-400">Nama</dt><dd className="mt-1 font-bold text-gray-800">{profile.name || 'Belum diatur'}</dd></div>
+              <div><dt className="text-xs font-semibold text-gray-400">Nomor Telepon</dt><dd className="mt-1 font-bold text-gray-800">+{profile.phone}</dd></div>
+              <div><dt className="text-xs font-semibold text-gray-400">Role</dt><dd className="mt-1 font-bold capitalize text-gray-800">{profile.role}</dd></div>
+            </dl></div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-5"><h2 className="text-sm font-black text-gray-900">Pengaturan Akun</h2>
+              <button onClick={() => void changePin()} className="mt-3 flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left text-sm font-bold text-gray-700"><KeyRound size={17}/> Ganti PIN</button>
+              <button onClick={logout} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-red-100 p-3 text-left text-sm font-bold text-red-600"><LogOut size={17}/> Logout</button>
+            </div>
+          </section>}
       </main>
-      {props.enableManagementTabs && (
-        <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
-          <button onClick={() => setActiveTab('produk')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'produk' ? 'text-[#00AA5B]' : 'text-gray-400')}>
-            <Package size={18} /> Produk
-          </button>
-          <button onClick={() => setActiveTab('bank')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'bank' ? 'text-[#00AA5B]' : 'text-gray-400')}>
-            <Landmark size={18} /> Bank
-          </button>
-          <button onClick={() => setActiveTab('livechat')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'livechat' ? 'text-[#00AA5B]' : 'text-gray-400')}>
-            <MessageCircle size={18} /> Livechat
-          </button>
-        </nav>
-      )}
-    </div>
-  );
+      <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
+        <button onClick={() => navigate('/admin')} aria-current={activeTab === 'produk' ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'produk' ? 'text-[#00AA5B]' : 'text-gray-400')}><Package size={18}/> Produk</button>
+        <button onClick={() => navigate('/admin/bank')} aria-current={isBank ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isBank ? 'text-[#00AA5B]' : 'text-gray-400')}><Landmark size={18}/> Bank</button>
+        <button onClick={() => navigate('/admin/live-chat')} aria-current={isLiveChat ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isLiveChat ? 'text-[#00AA5B]' : 'text-gray-400')}><MessageCircle size={18}/> Livechat</button>
+      </nav>
+    </div>;
+  }
 
   const phoneDigits = phone.replace(/\D/g, '').replace(/^62/, '').replace(/^0/, '');
   const headings: Record<Step, string> = {
