@@ -219,7 +219,7 @@ export default function AdminPortal(props: Props) {
         <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">{isProducts ? (currentPath === '/admin' ? 'Produk' : currentPath.endsWith('/new') ? 'Tambah Produk' : 'Ubah Produk') : isBank ? 'Rekening Bank' : isLiveChat ? 'Livechat' : isProfile ? 'Profil Akun' : 'Admin Dashboard'}</h1></div>
         <button type="button" onClick={() => navigate('/admin/profile')} className={'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ' + (isProfile ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600')} aria-current={isProfile ? 'page' : undefined}><ShieldCheck size={15}/> Profil</button>
       </header>
-      <main className="content-admin min-h-0 flex-1 overflow-y-auto">
+      <main className="content-admin min-h-0 flex-1 flex flex-col overflow-hidden">
         {!isKnownRoute ? <div className="p-8 text-center"><h2 className="text-lg font-black text-gray-900">Halaman Admin Tidak Ditemukan</h2><p className="mt-2 text-sm text-gray-500">Alamat halaman yang dibuka tidak tersedia.</p><button onClick={() => navigate('/admin')} className="mt-4 rounded-xl bg-[#00AA5B] px-4 py-2 text-sm font-bold text-white">Kembali ke Produk</button></div>
         : isProducts ? <AdminDashboard {...props} role={profile.role}/>
         : isBank || isLiveChat ? <AdminManagement tab={activeTab as 'bank' | 'livechat'} role={profile.role} phone={profile.phone}/>
