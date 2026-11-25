@@ -185,6 +185,10 @@ export default function AdminPortal(props: Props) {
     setPin('');
     setName('');
     setStep('phone');
+    setChangePinOpen(false);
+    setCurrentPin('');
+    setChangePinValue('');
+    setChangePinConfirm('');
     setError('');
     setNotice('');
   };
