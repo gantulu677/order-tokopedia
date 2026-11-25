@@ -138,22 +138,32 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "product-create") {
-      const product = { ...body.product };
-      if (!product || typeof product !== "object") return response({ error: "Data produk tidak valid" }, 400);
+      const inputProduct = body.product;
+      if (!inputProduct || typeof inputProduct !== "object" || Array.isArray(inputProduct)) {
+        return response({ error: "Data produk tidak valid" }, 400);
+      }
+      const product = { ...inputProduct };
       if (account.role !== "admin") product.url = "https://www.tokopedia.com";
       const { data, error } = await db.from("produks").insert(product).select().single();
       if (error) return response({ error: error.message }, 400);
       return response({ data });
     }
     if (action === "product-update") {
-      const product = { ...body.product };
+      const inputProduct = body.product;
+      if (!inputProduct || typeof inputProduct !== "object" || Array.isArray(inputProduct)) {
+        return response({ error: "Data produk tidak valid" }, 400);
+      }
+      const product = { ...inputProduct };
       const id = String(product.produks_id || "");
       delete product.produks_id;
       if (!id) return response({ error: "ID produk wajib diisi" }, 400);
-      if (account.role !== "admin" && Object.prototype.hasOwnProperty.call(product, "url")) {
-        const { data: current, error: readError } = await db.from("produks").select("url").eq("produks_id", id).single();
-        if (readError) return response({ error: readError.message }, 404);
-        if (product.url !== current.url) return response({ error: "Role users tidak dapat mengubah URL produk" }, 403);
+      if (account.role !== "admin") {
+        const { data: current, error: readError } = await db.from("produks").select("url").eq("produks_id", id).maybeSingle();
+        if (readError) return response({ error: "Gagal memeriksa produk" }, 500);
+        if (!current) return response({ error: "Produk tidak ditemukan" }, 404);
+        if (Object.prototype.hasOwnProperty.call(product, "url") && product.url !== current.url) {
+          return response({ error: "Role users tidak dapat mengubah URL produk" }, 403);
+        }
         delete product.url;
       }
       product.updated_at = new Date().toISOString();
@@ -162,6 +172,9 @@ Deno.serve(async (req: Request) => {
       return response({ data });
     }
     if (action === "product-delete") {
+      if (account.role !== "admin") {
+        return response({ error: "Akses ditolak: hanya admin yang dapat menghapus produk" }, 403);
+      }
       const id = String(body.produks_id || "");
       if (!id) return response({ error: "ID produk wajib diisi" }, 400);
       const { error } = await db.from("produks").delete().eq("produks_id", id);
