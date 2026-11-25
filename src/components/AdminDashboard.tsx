@@ -599,7 +599,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {!enableManagementTabs && <button onClick={handleAddNew} className="py-1.5 px-3 bg-[#00AA5B] hover:bg-[#00914d] text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-sm active:scale-95 transition flex items-center gap-1"><Plus size={14} className="stroke-[3]"/><span>Tambah</span></button>}
         </header>
 
-        <main className={enableManagementTabs ? "p-3 space-y-3.5 pb-6" : "content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24"}>
+        <main className={enableManagementTabs ? "content-admin min-h-0 flex-1 overflow-y-auto p-3 space-y-3.5 pb-6" : "content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24"}>
           {enableManagementTabs && <button onClick={handleAddNew} className="w-full rounded-xl bg-[#00AA5B] px-4 py-3 text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2"><Plus size={15}/> Tambah Produk</button>}
           {/* Dashboard KPI Banner */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.01)] overflow-hidden">
