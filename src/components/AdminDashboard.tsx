@@ -14,7 +14,6 @@ import {
   Search
 } from 'lucide-react';
 import { Product, ColorVariant, StorageVariant } from '../types';
-import { initialProduksList } from '../data';
 import { adminUploadImage } from '../lib/adminApi';
 
 const generateProdukId = () => {
@@ -49,7 +48,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({});
-  const [seeding, setSeeding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,29 +81,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       } finally {
         setRefreshing(false);
       }
-    }
-  };
-
-  const handleSeedMocks = async () => {
-    setSeeding(true);
-    try {
-      let count = 0;
-      for (const p of initialProduksList) {
-        if (!produks.some(existing => existing.produks_id === p.produks_id)) {
-          await onAdd(p);
-          count++;
-        }
-      }
-      if (count > 0) {
-        alert(`Berhasil menambahkan ${count} produk contoh ke database!`);
-      } else {
-        alert("Semua produk contoh sudah ada di database.");
-      }
-    } catch (error) {
-      console.error("Failed to seed mocks:", error);
-      alert("Gagal memuat produk contoh");
-    } finally {
-      setSeeding(false);
     }
   };
 
@@ -191,16 +166,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
 
     try {
-      if (isAdding) {
-        await onAdd(finalProduct as Product);
-      } else {
-        await onEdit(finalProduct as Product);
-      }
-      if (onRefresh) {
-        await onRefresh();
-      }
+      JSON.parse(String(finalProduct.colors || '[]'));
+      JSON.parse(String(finalProduct.variants || '[]'));
+      if (Number(finalProduct.stock_total) < 0 || Number(finalProduct.stock_sold) < 0) throw new Error('Nilai stok tidak boleh negatif');
+      if (Number(finalProduct.price) < 0 || Number(finalProduct.sale_price) < 0) throw new Error('Harga tidak boleh negatif');
+      if (isAdding) await onAdd(finalProduct as Product);
+      else await onEdit(finalProduct as Product);
+      if (onRefresh) await onRefresh();
     } catch (error) {
       console.error("Gagal menyimpan produk:", error);
+      alert(error instanceof Error ? `Gagal menyimpan produk: ${error.message}` : 'Gagal menyimpan produk');
+      return;
     }
     setEditingId(null);
     setIsAdding(false);
@@ -282,10 +258,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <input type="hidden" value={formData.price !== undefined ? formData.price : 0} />
-              <input type="hidden" value={formData.stock_total !== undefined ? formData.stock_total : 1} />
-              <input type="hidden" value={formData.stock_sold !== undefined ? formData.stock_sold : 0} />
-
               <div>
                 <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Harga Jual</label>
                 <div className="relative">
@@ -315,6 +287,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Card 2: Data Katalog — mirrors the editable columns in public.produks */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
+              <span className="w-1 h-4 bg-[#00AA5B] rounded-full"></span>
+              <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Data Katalog & Spesifikasi</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-[11px] font-bold text-gray-500">Kategori
+                <input value={formData.category || ''} onChange={e => updateField('category', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Brand
+                <input value={formData.brand || ''} onChange={e => updateField('brand', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Stok total
+                <input type="number" min="0" value={formData.stock_total ?? 0} onChange={e => updateField('stock_total', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Stok terjual
+                <input type="number" min="0" value={formData.stock_sold ?? 0} onChange={e => updateField('stock_sold', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Harga normal (price)
+                <input type="number" min="0" value={formData.price ?? 0} onChange={e => updateField('price', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Harga promo (sale_price)
+                <input type="number" min="0" value={formData.sale_price ?? 0} onChange={e => updateField('sale_price', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Rating toko
+                <input type="number" min="0" max="5" step="0.1" value={formData.shop_rating ?? 0} onChange={e => updateField('shop_rating', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Pengikut toko
+                <input type="number" min="0" value={formData.shop_followers ?? 0} onChange={e => updateField('shop_followers', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Rata-rata ulasan
+                <input type="number" min="0" max="5" step="0.1" value={formData.reviews_average ?? 0} onChange={e => updateField('reviews_average', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+              <label className="text-[11px] font-bold text-gray-500">Jumlah ulasan
+                <input type="number" min="0" value={formData.reviews_total ?? 0} onChange={e => updateField('reviews_total', Number(e.target.value))} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+              </label>
+            </div>
+            <label className="block text-[11px] font-bold text-gray-500">Waktu respons toko
+              <input value={formData.shop_response_time || ''} onChange={e => updateField('shop_response_time', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+            </label>
+            <label className="block text-[11px] font-bold text-gray-500">URL gambar toko
+              <input value={formData.shop_image || ''} onChange={e => updateField('shop_image', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs" />
+            </label>
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-600">
+              <input type="checkbox" checked={Boolean(formData.shop_verified)} onChange={e => updateField('shop_verified', e.target.checked)} />
+              Toko terverifikasi
+            </label>
+            <label className="block text-[11px] font-bold text-gray-500">Colors (JSON)
+              <textarea rows={4} value={formData.colors || '[]'} onChange={e => updateField('colors', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs font-mono" />
+            </label>
+            <label className="block text-[11px] font-bold text-gray-500">Variants (JSON)
+              <textarea rows={4} value={formData.variants || '[]'} onChange={e => updateField('variants', e.target.value)} className="mt-1 w-full border rounded-xl p-3 text-xs font-mono" />
+            </label>
           </div>
 
           {/* Card 2: Media & Gambar */}
@@ -413,9 +441,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   placeholder="Lokasi pengiriman (Contoh: Jakarta Barat)"
                 />
               </div>
-
-              <input type="hidden" value={formData.shop_rating !== undefined ? formData.shop_rating : 4.9} />
-              <input type="hidden" value={formData.reviews_average !== undefined ? formData.reviews_average : 5} />
 
               {role === 'admin' && (
                 <div>
@@ -577,7 +602,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* Grid Actions */}
-                <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
+                <div className={role === 'admin' ? 'grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3' : 'grid grid-cols-2 gap-2 border-t border-gray-100/50 pt-3'}>
                   <button 
                     onClick={() => window.open(`/${p.produks_id}`, '_blank')} 
                     className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
@@ -594,6 +619,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Edit3 size={12} className="stroke-[2.5]" />
                     <span>Ubah</span>
                   </button>
+                {role === 'admin' && (
                   <button 
                     onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
                     className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" 
@@ -602,6 +628,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Trash2 size={12} className="stroke-[2.5]" />
                     <span>Hapus</span>
                   </button>
+                )}
                 </div>
               </div>
             );
