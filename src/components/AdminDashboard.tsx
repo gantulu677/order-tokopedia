@@ -337,18 +337,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* Varian Produk */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
-            <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Varian Produk (JSON)</h2>
-            <label className="block text-[11px] font-bold text-gray-500">Warna — array objek (name, hex, imgUrl)
-              <textarea rows={4} value={typeof formData.colors === 'string' ? formData.colors : JSON.stringify(formData.colors ?? [], null, 2)} onChange={e => updateField('colors', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-xs font-mono" />
-            </label>
-            <label className="block text-[11px] font-bold text-gray-500">Varian / Kapasitas — array objek (storage, price, sale_price)
-              <textarea rows={4} value={typeof formData.variants === 'string' ? formData.variants : JSON.stringify(formData.variants ?? [], null, 2)} onChange={e => updateField('variants', e.target.value)} className="mt-1 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-xs font-mono" />
-            </label>
-            <p className="text-[10px] text-gray-400">Gunakan JSON array yang valid, atau [] jika tidak ada varian.</p>
-          </div>
-
           {/* Reputasi & Profil Toko */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Reputasi & Profil Toko</h2>
