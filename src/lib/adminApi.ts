@@ -27,14 +27,13 @@ export async function adminApi<T = any>(action: string, payload: Record<string, 
 export async function adminUploadImage(file: File): Promise<{ path: string; publicUrl: string }> {
   const token = localStorage.getItem('tokopedia_admin_token') || '';
   if (!token) throw new Error('Sesi admin tidak ditemukan. Silakan login kembali.');
-  const form = new FormData();
-  form.append('file', file);
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/tokopedia-admin`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-    body: form,
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Gagal membaca file gambar.'));
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+    reader.readAsDataURL(file);
   });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || 'Upload gambar gagal');
-  return result as { path: string; publicUrl: string };
+  const encoded = dataUrl.split(',')[1];
+  if (!encoded) throw new Error('Data gambar tidak valid.');
+  return adminApi('upload-image', { fileName: file.name, fileType: file.type, fileBase64: encoded }, token);
 }
