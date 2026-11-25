@@ -222,7 +222,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   if (editingId || isAdding) {
     content = (
-      <div className="w-full h-full flex flex-col bg-[#F8FAFC] relative overflow-hidden">
+      <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden">
         {/* Sticky Header */}
         <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
           <button 
@@ -242,7 +242,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </header>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar">
+        <div className="content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar">
           {/* Card 1: Informasi Utama */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
@@ -502,7 +502,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
 
     content = (
-      <div className="w-full h-full flex flex-col bg-[#FAFBFD] relative overflow-hidden">
+      <div className="w-full h-full min-h-0 flex flex-col bg-[#FAFBFD] relative overflow-hidden">
         <header className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
              <button onClick={() => window.location.href = '/'} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition">
@@ -519,7 +519,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </header>
 
-        <main className="flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24">
+        <main className="content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24">
           {/* Dashboard KPI Banner */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.01)] overflow-hidden">
             <div className="grid grid-cols-2 divide-x divide-gray-50">
@@ -670,7 +670,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   return (
-    <div className="min-h-full bg-slate-950 md:bg-[#0B0F19] flex items-center justify-center font-sans relative antialiased selection:bg-[#00AA5B]/20">
+    <div className="w-full h-full min-h-full flex flex-col items-center justify-center bg-slate-950 md:bg-[#0B0F19] font-sans relative antialiased selection:bg-[#00AA5B]/20">
       {/* Premium background light glow on desktop */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-green-500/10 blur-[120px]" />
@@ -678,7 +678,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Main smartphone device frame mockup on desktop, full-screen on mobile */}
-      <div className="w-full h-full md:max-w-[412px] bg-white md:rounded-[48px] md:border-[12px] md:border-slate-900 md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden transition-all duration-300 md:ring-1 md:ring-white/10">
+      <div className="w-full h-full min-h-0 md:max-w-[412px] bg-white md:rounded-[48px] md:border-[12px] md:border-slate-900 md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden transition-all duration-300 md:ring-1 md:ring-white/10">
         
         {/* Dynamic Notch / Island on desktop */}
         <div className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-2xl z-50 items-center justify-center pointer-events-none">
@@ -701,7 +701,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Device content space */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
+        <div className="min-h-0 flex-1 flex flex-col relative overflow-hidden bg-slate-50">
           {content}
         </div>
 
