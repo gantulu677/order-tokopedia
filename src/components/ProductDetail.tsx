@@ -78,7 +78,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
         const mappedProduct = {
           id: data.produks_id,
           title: data.title,
-          description: data.description,\n          features: Array.isArray(data.features) ? data.features : createDefaultProductFeatures(),
+          description: data.description,
+          features: Array.isArray(data.features) ? data.features : createDefaultProductFeatures(),
           category: data.category,
           brand: data.brand,
           media: Array.isArray(data.media) ? data.media : [],
