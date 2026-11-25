@@ -658,92 +658,164 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             ))}
           </div>
 
-          {/* Product Cards */}
-          {filteredProduks.map((p, idx) => {
-            const hasDiscount = p.price > p.sale_price;
-            return (
-              <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-3.5 hover:border-gray-200 transition-colors duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-                <div className="flex gap-3.5 items-start">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center shadow-sm">
-                    {p.media?.[0] ? (
-                      <img src={p.media[0]} alt="" className="w-full h-full object-cover animate-fade-in" referrerPolicy="no-referrer" />
-                    ) : (
-                      <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
-                        <ImageIcon size={18} />
-                      </div>
+          {enableManagementTabs ? (
+            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-wider text-gray-800">Daftar Produk</h2>
+                  <p className="mt-0.5 text-[10px] text-gray-400">{filteredProduks.length} produk ditampilkan</p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-green-50 px-2.5 py-1 text-[10px] font-bold text-[#00AA5B]">Tabel Produk</span>
+              </div>
+              <div className="w-full overflow-x-auto">
+                <table className="w-full min-w-[1080px] border-collapse text-left">
+                  <thead className="bg-gray-50">
+                    <tr className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+                      <th scope="col" className="px-4 py-3">Produk</th>
+                      <th scope="col" className="px-3 py-3">Kategori</th>
+                      <th scope="col" className="px-3 py-3">Brand</th>
+                      <th scope="col" className="px-3 py-3 text-right">Harga Normal</th>
+                      <th scope="col" className="px-3 py-3 text-right">Harga Jual</th>
+                      <th scope="col" className="px-3 py-3 text-right">Terjual</th>
+                      <th scope="col" className="px-3 py-3">Stok</th>
+                      <th scope="col" className="px-4 py-3 text-center">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredProduks.map((p, idx) => {
+                      const sold = Number(p.stock_sold) || 0;
+                      const total = Number(p.stock_total) || 0;
+                      const stockPercent = total > 0 ? Math.min(100, Math.round((sold / total) * 100)) : 0;
+                      const hasDiscount = Number(p.price) > Number(p.sale_price);
+                      return (
+                        <tr key={p.produks_id || `admin-prod-${idx}`} className="align-middle hover:bg-gray-50/70">
+                          <td className="px-4 py-3">
+                            <div className="flex min-w-[240px] items-center gap-3">
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                                {p.media?.[0] ? (
+                                  <img src={p.media[0]} alt={p.title} className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <ImageIcon size={18} className="text-gray-300" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="max-w-[280px] truncate text-xs font-bold text-gray-900" title={p.title}>{p.title || 'Tanpa judul'}</p>
+                                <p className="mt-1 font-mono text-[10px] text-gray-400">{p.produks_id || '-'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-xs text-gray-600">{p.category || '-'}</td>
+                          <td className="px-3 py-3 text-xs font-semibold text-gray-700">{p.brand || 'No Brand'}</td>
+                          <td className="px-3 py-3 text-right text-xs tabular-nums text-gray-500">{formatRupiah(p.price)}</td>
+                          <td className="px-3 py-3 text-right">
+                            <span className="text-xs font-black tabular-nums text-[#00AA5B]">{formatRupiah(p.sale_price)}</span>
+                            {hasDiscount && <span className="mt-0.5 block text-[10px] tabular-nums text-gray-400 line-through">{formatRupiah(p.price)}</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right text-xs font-bold tabular-nums text-gray-700">{sold.toLocaleString('id-ID')}</td>
+                          <td className="px-3 py-3">
+                            <div className="w-28">
+                              <div className="mb-1 flex items-center justify-between gap-2 text-[10px] tabular-nums">
+                                <span className="font-bold text-gray-700">{Math.max(0, total - sold)} tersisa</span>
+                                <span className="text-gray-400">{total}</span>
+                              </div>
+                              <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+                                <div className="h-full rounded-full bg-[#00AA5B]" style={{ width: `${stockPercent}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button type="button" onClick={() => window.open(`/${p.produks_id}`, '_blank')} aria-label={`Lihat ${p.title}`} title="Lihat produk" className="rounded-lg border border-slate-100 bg-slate-50 p-2 text-slate-600 transition hover:bg-slate-100">
+                                <ExternalLink size={14} />
+                              </button>
+                              <button type="button" onClick={() => handleEdit(p)} aria-label={`Ubah ${p.title}`} title="Ubah produk" className="rounded-lg border border-green-100 bg-green-50 p-2 text-[#00AA5B] transition hover:bg-green-100">
+                                <Edit3 size={14} />
+                              </button>
+                              <button type="button" onClick={() => { if (window.confirm('Hapus produk ini?')) onDelete(p.produks_id); }} aria-label={`Hapus ${p.title}`} title="Hapus produk" className="rounded-lg border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredProduks.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-16 text-center">
+                          <Package size={28} className="mx-auto text-gray-300" />
+                          <p className="mt-3 text-xs font-black text-gray-900">Tidak ada produk ditemukan</p>
+                          <p className="mt-1 text-[10px] text-gray-400">Coba kata kunci pencarian atau filter brand lain.</p>
+                        </td>
+                      </tr>
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0 pt-0.5">
-                    <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 select-none">
-                      <span>{p.brand || 'No Brand'}</span>
-                      <span>·</span>
-                      <span className="font-mono">{p.produks_id}</span>
+                  </tbody>
+                </table>
+              </div>
+              <p className="border-t border-gray-100 px-4 py-2 text-[10px] text-gray-400">Geser tabel ke samping untuk melihat seluruh kolom pada layar kecil.</p>
+            </section>
+          ) : (
+            <>
+              {/* Product Cards - retained for the legacy /makkasau interface */}
+              {filteredProduks.map((p, idx) => {
+                const hasDiscount = p.price > p.sale_price;
+                return (
+                  <div key={p.produks_id || `admin-prod-${idx}`} className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-3.5 hover:border-gray-200 transition-colors duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+                    <div className="flex gap-3.5 items-start">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100 flex items-center justify-center shadow-sm">
+                        {p.media?.[0] ? (
+                          <img src={p.media[0]} alt="" className="w-full h-full object-cover animate-fade-in" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 select-none">
+                          <span>{p.brand || 'No Brand'}</span>
+                          <span>·</span>
+                          <span className="font-mono">{p.produks_id}</span>
+                        </div>
+                        <h3 className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">{p.title}</h3>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                          <span className="text-[13px] font-black text-[#00AA5B] tabular-nums">{formatRupiah(p.sale_price)}</span>
+                          {hasDiscount && <span className="text-[10px] text-gray-400 line-through font-bold tabular-nums">{formatRupiah(p.price)}</span>}
+                        </div>
+                      </div>
                     </div>
-                    <h3 className="text-xs font-bold text-gray-900 leading-snug line-clamp-1">{p.title}</h3>
-                    <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-[13px] font-black text-[#00AA5B] tabular-nums">{formatRupiah(p.sale_price)}</span>
-                      {hasDiscount && (
-                        <span className="text-[10px] text-gray-400 line-through font-bold tabular-nums">{formatRupiah(p.price)}</span>
-                      )}
+                    <div className="bg-gray-50/50 rounded-xl p-2.5">
+                      <div className="flex justify-between items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1.5">
+                        <span>Stok Terjual</span>
+                        <span className="text-gray-600 font-black tabular-nums">{p.stock_sold} / {p.stock_total} <span className="text-[8px] text-gray-400">item</span></span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#00AA5B] rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.round(((p.stock_sold || 0) / (p.stock_total || 1)) * 100))}%` }} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
+                      <button onClick={() => window.open(`/${p.produks_id}`, '_blank')} className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" title="Buka Produk">
+                        <ExternalLink size={12} className="stroke-[2.5]" /><span>Lihat</span>
+                      </button>
+                      <button onClick={() => handleEdit(p)} className="flex items-center justify-center gap-1.5 h-10 bg-emerald-50 hover:bg-emerald-100/80 text-[#00AA5B] text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-green-100/30" title="Edit">
+                        <Edit3 size={12} className="stroke-[2.5]" /><span>Ubah</span>
+                      </button>
+                      <button onClick={() => { if (confirm('Hapus produk ini?')) onDelete(p.produks_id); }} className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" title="Hapus">
+                        <Trash2 size={12} className="stroke-[2.5]" /><span>Hapus</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                {/* Stock Level Indicator */}
-                <div className="bg-gray-50/50 rounded-xl p-2.5">
-                  <div className="flex justify-between items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1.5">
-                    <span>Stok Terjual</span>
-                    <span className="text-gray-600 font-black tabular-nums">{p.stock_sold} / {p.stock_total} <span className="text-[8px] text-gray-400">item</span></span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#00AA5B] rounded-full transition-all duration-300" 
-                      style={{ width: `${Math.min(100, Math.round(((p.stock_sold || 0) / (p.stock_total || 1)) * 100))}%` }}
-                    />
+                );
+              })}
+              {filteredProduks.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
+                  <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100"><Package size={28} /></div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-black text-gray-900">Tidak ada produk ditemukan</p>
+                    <p className="text-[10px] text-gray-400 font-bold max-w-[200px] mx-auto uppercase tracking-wide">Coba kata kunci pencarian atau filter lain</p>
                   </div>
                 </div>
-
-                {/* Grid Actions */}
-                <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
-                  <button 
-                    onClick={() => window.open(`/${p.produks_id}`, '_blank')} 
-                    className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
-                    title="Buka Produk"
-                  >
-                    <ExternalLink size={12} className="stroke-[2.5]" />
-                    <span>Lihat</span>
-                  </button>
-                  <button 
-                    onClick={() => handleEdit(p)} 
-                    className="flex items-center justify-center gap-1.5 h-10 bg-emerald-50 hover:bg-emerald-100/80 text-[#00AA5B] text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-green-100/30" 
-                    title="Edit"
-                  >
-                    <Edit3 size={12} className="stroke-[2.5]" />
-                    <span>Ubah</span>
-                  </button>
-                  <button 
-                    onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
-                    className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" 
-                    title="Hapus"
-                  >
-                    <Trash2 size={12} className="stroke-[2.5]" />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {filteredProduks.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
-              <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100">
-                <Package size={28} />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xs font-black text-gray-900">Tidak ada produk ditemukan</p>
-                <p className="text-[10px] text-gray-400 font-bold max-w-[200px] mx-auto uppercase tracking-wide">Coba kata kunci pencarian atau filter lain</p>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </main>
       </div>
