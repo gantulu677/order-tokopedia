@@ -3,7 +3,8 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ProductDetail from './components/ProductDetail';
 import AdminDashboard from './components/AdminDashboard';
-import AdminPinEntry from './components/AdminPinEntry';
+import AdminPortal from './components/AdminPortal';
+import { adminApi } from './lib/adminApi';
 import Checkout from './components/Checkout';
 import IsBlocked from './components/IsBlocked';
 import { initialProduksList } from './data';
@@ -175,46 +176,18 @@ export default function App() {
   }, []);
 
   const handleAddProduct = async (newProduct: Product) => {
-    try {
-      const { error } = await supabase
-        .from('produks')
-        .insert([newProduct]);
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Error adding product:', error);
-      alert('Gagal menambah produk: ' + (error?.message || error));
-    }
+    try { await adminApi('product-create', { product: newProduct }); await fetchProducts(); }
+    catch (error: any) { console.error('Error adding product:', error); alert('Gagal menambah produk: ' + (error?.message || error)); throw error; }
   };
 
   const handleEditProduct = async (updatedProduct: Product) => {
-    try {
-      const { error } = await supabase
-        .from('produks')
-        .update(updatedProduct)
-        .eq('produks_id', updatedProduct.produks_id);
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Error editing product:', error);
-      alert('Gagal mengubah produk: ' + (error?.message || error));
-    }
+    try { await adminApi('product-update', { product: updatedProduct }); await fetchProducts(); }
+    catch (error: any) { console.error('Error editing product:', error); alert('Gagal mengubah produk: ' + (error?.message || error)); throw error; }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('produks')
-        .delete()
-        .eq('produks_id', id);
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Error deleting product:', error);
-      alert('Gagal menghapus produk: ' + (error?.message || error));
-    }
-  };
-
-  const handleAuthSuccess = () => {
-    setIsAdminAuthorized(true);
-    sessionStorage.setItem('adminAuthorized', 'true');
+    try { await adminApi('product-delete', { produks_id: id }); await fetchProducts(); }
+    catch (error: any) { console.error('Error deleting product:', error); alert('Gagal menghapus produk: ' + (error?.message || error)); throw error; }
   };
 
   if (loading) {
@@ -228,15 +201,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/is-blocked" element={<IsBlocked />} />
-      <Route path="/makkasau" element={
-        <AdminDashboard 
-          produks={produks} 
-          onAdd={handleAddProduct}
-          onEdit={handleEditProduct}
-          onDelete={handleDeleteProduct}
-          onRefresh={fetchProducts}
-        />
-      } />
+      <Route path="/admin" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
+      <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} />} />
       <Route path="/checkout" element={
         <Checkout 
           produks={produks} 
