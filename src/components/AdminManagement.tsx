@@ -270,7 +270,6 @@ export default function AdminManagement({ tab, role, phone }: Props) {
                     <button onClick={() => setBankDraft(bank)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Ubah rekening"><Pencil size={15}/></button>
                     <button onClick={() => void deleteBank(bank.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50" aria-label="Hapus rekening"><Trash2 size={15}/></button>
                   </div>
-                </div>
               </div>
             </article>
           ))}
