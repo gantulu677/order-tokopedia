@@ -194,9 +194,9 @@ export default function App() {
       <Route path="/is-blocked" element={<IsBlocked />} />
       <Route path="/admin/*" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} produksLoading={loading} enableManagementTabs />} />
       <Route path="/makkasau" element={<AdminPortal produks={produks} onAdd={handleAddProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} onRefresh={fetchProducts} produksLoading={loading} />} />
-      <Route path="/checkout" element={
-        {loading ? <TokopediaSplashScreen message="Menghubungkan ke Database..." /> : <Checkout 
-          produks={produks} 
+      <Route path="/checkout" element={loading ? <TokopediaSplashScreen message="Menghubungkan ke Database..." /> : (
+        <Checkout
+          produks={produks}
           onBack={() => {
             const searchParams = new URLSearchParams(location.search);
             const currentId = searchParams.get('produks_id');
@@ -205,9 +205,9 @@ export default function App() {
             } else {
               navigate(-1);
             }
-          }} 
-        />}
-      } />
+          }}
+        />
+      )} />
       <Route path="/:produks_id" element={loading ? <TokopediaSplashScreen message="Menghubungkan ke Database..." /> : <ProductDetail key={location.pathname} produks={produks} />} />
       <Route path="/" element={<RootRedirect />} />
     </Routes>
