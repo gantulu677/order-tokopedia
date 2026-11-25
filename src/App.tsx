@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ProductDetail from './components/ProductDetail';
-import AdminDashboard from './components/AdminDashboard';
 import AdminPortal from './components/AdminPortal';
 import { adminApi } from './lib/adminApi';
 import Checkout from './components/Checkout';
@@ -63,10 +62,6 @@ export default function App() {
   const [produks, setProduks] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGlobalBlocked, setIsGlobalBlocked] = useState<boolean>(false);
-  const [isAdminAuthorized, setIsAdminAuthorized] = useState(() => {
-    return sessionStorage.getItem('adminAuthorized') === 'true';
-  });
-
   const navigate = useNavigate();
   const location = useLocation();
 
