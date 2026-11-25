@@ -215,7 +215,6 @@ Deno.serve(async (req: Request) => {
 
     if (action === "bank-list") {
       let query = db.from("admin_bank").select("*").order("is_default", { ascending: false }).order("bank_name");
-      if (account.role !== "admin") query = query.eq("is_active", true);
       const { data, error } = await query;
       if (error) return response({ error: "Gagal memuat rekening bank" }, 400);
       return response({ banks: data || [] });
