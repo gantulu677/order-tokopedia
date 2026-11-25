@@ -262,6 +262,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     content = (
       <div className={enableManagementTabs ? "w-full min-h-full flex flex-col bg-[#F8FAFC] relative" : "w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden"}>
         {!enableManagementTabs && (
+          <>
           {/* Sticky Header */}
           <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
             <button 
@@ -279,6 +280,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
           </header>
+          </>
         )}
 
         {/* Scrollable Form Content */}
@@ -591,6 +593,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     content = (
       <div className="w-full h-full min-h-0 flex flex-col bg-[#FAFBFD] relative overflow-hidden">
         {!enableManagementTabs && (
+          <>
           <header className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
                <button onClick={() => window.location.href = '/'} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition">
