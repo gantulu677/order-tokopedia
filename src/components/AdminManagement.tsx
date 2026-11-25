@@ -201,7 +201,7 @@ export default function AdminManagement({ tab, role, phone }: Props) {
 
   if (tab === 'bank') {
     return (
-      <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC]">
+      <div className="w-full min-h-full flex flex-col bg-[#F8FAFC]">
         <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-5">
           <div className="flex items-center gap-2 text-[#00AA5B]">
             <Banknote size={20} />
@@ -212,7 +212,7 @@ export default function AdminManagement({ tab, role, phone }: Props) {
           </p>
         </header>
 
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+        <main className="p-4 space-y-3">
           {bankError && <p className="rounded-xl bg-red-50 text-red-600 p-3 text-xs">{bankError}</p>}
           {!bankDraft && (
             <button onClick={() => setBankDraft(emptyBank())} className="w-full rounded-xl bg-[#00AA5B] text-white p-3 text-sm font-bold flex items-center justify-center gap-2">
@@ -292,7 +292,7 @@ export default function AdminManagement({ tab, role, phone }: Props) {
       </header>
 
       {role === 'admin' && !selectedPhone ? (
-        <main className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+        <main className="p-3 space-y-2">
           {chatError && <p className="rounded-xl bg-red-50 p-3 text-xs text-red-600">{chatError}</p>}
           {conversations.map(conversation => (
             <button key={conversation.phone} onClick={() => setSelectedPhone(conversation.phone)} className="w-full rounded-xl border border-gray-100 bg-white p-3 text-left hover:border-green-200">

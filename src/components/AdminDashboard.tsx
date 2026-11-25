@@ -244,7 +244,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   if (editingId || isAdding) {
     content = (
-      <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden">
+      <div className="w-full min-h-full flex flex-col bg-[#F8FAFC] relative">
         {/* Sticky Header */}
         <header className="flex-shrink-0 px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10 flex items-center gap-3 shadow-sm">
           <button 
@@ -264,7 +264,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </header>
 
         {/* Scrollable Form Content */}
-        <div className="content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar">
+        <div className="p-4 space-y-5 pb-24">
           {/* Card 1: Informasi Utama */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
@@ -585,7 +585,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         </header>
 
-        <main className="content-admin min-h-0 flex-1 p-3 space-y-3.5 overflow-y-auto no-scrollbar pb-24">
+        <main className="p-3 space-y-3.5 pb-6">
           <button onClick={handleAddNew} className="w-full rounded-xl bg-[#00AA5B] px-4 py-3 text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2"><Plus size={15}/> Tambah Produk</button>
           {/* Dashboard KPI Banner */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.01)] overflow-hidden">
