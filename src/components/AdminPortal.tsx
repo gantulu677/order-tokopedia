@@ -194,7 +194,7 @@ export default function AdminPortal(props: Props) {
       </div>
       <main className="min-h-0 flex-1">
         {activeTab === 'produk' || !props.enableManagementTabs
-          ? <AdminDashboard {...props} role={profile.role} />
+          ? <AdminDashboard {...props} role={profile.role} showDeviceStatusBar={!props.enableManagementTabs} />
           : <AdminManagement tab={activeTab} role={profile.role} phone={profile.phone} />}
       </main>
       {props.enableManagementTabs && (

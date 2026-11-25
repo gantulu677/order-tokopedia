@@ -36,6 +36,7 @@ interface AdminDashboardProps {
   onDelete: (id: string) => void;
   onRefresh?: () => Promise<void>;
   role: 'admin' | 'users';
+  showDeviceStatusBar?: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -44,7 +45,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onEdit, 
   onDelete,
   onRefresh,
-  role
+  role,
+  showDeviceStatusBar = true
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -744,20 +746,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="w-12 h-1 bg-slate-950 rounded-full" />
         </div>
 
-        {/* Dynamic status bar for authentic mobile experience */}
-        <div className="flex-shrink-0 px-6 pt-3 pb-1 flex justify-between items-center text-[11px] font-black text-gray-500 bg-white select-none z-40 border-b border-gray-50">
-          <span>09:41</span>
-          <div className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.79-1.79C9.09 19.63 10.51 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
-            </svg>
-            <span className="text-[9px] font-bold">5G</span>
-            <div className="w-5 h-2.5 border border-gray-400 rounded-sm p-0.5 flex items-center">
-              <div className="h-full w-3.5 bg-gray-500 rounded-[1px]" />
+        {showDeviceStatusBar && (
+          <div className="flex-shrink-0 px-6 pt-3 pb-1 flex justify-between items-center text-[11px] font-black text-gray-500 bg-white select-none z-40 border-b border-gray-50">
+            <span>09:41</span>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02 0l1.79-1.79C9.09 19.63 10.51 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+              </svg>
+              <span className="text-[9px] font-bold">5G</span>
+              <div className="w-5 h-2.5 border border-gray-400 rounded-sm p-0.5 flex items-center">
+                <div className="h-full w-3.5 bg-gray-500 rounded-[1px]" />
+              </div>
             </div>
           </div>
-        </div>
-
+        )}
         {/* Device content space */}
         <div className="min-h-0 flex-1 flex flex-col relative overflow-hidden bg-slate-50">
           {content}
