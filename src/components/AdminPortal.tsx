@@ -161,8 +161,8 @@ export default function AdminPortal(props: Props) {
     setError('');
     setNotice('');
     try {
-      if (!/^\\d{6}$/.test(currentPin)) throw new Error('PIN lama harus tepat 6 digit');
-      if (!/^\\d{6}$/.test(changePinValue)) throw new Error('PIN baru harus tepat 6 digit');
+      if (!/^\d{6}$/.test(currentPin)) throw new Error('PIN lama harus tepat 6 digit');
+      if (!/^\d{6}$/.test(changePinValue)) throw new Error('PIN baru harus tepat 6 digit');
       if (changePinValue !== changePinConfirm) throw new Error('Konfirmasi PIN tidak sama');
       await adminApi('change-pin', { currentPin, newPin: changePinValue });
       setCurrentPin('');
@@ -234,13 +234,13 @@ export default function AdminPortal(props: Props) {
             {changePinOpen && <form onSubmit={changePin} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-3">
               <h3 className="text-sm font-black text-gray-900">Perbarui PIN</h3>
               <label className="block text-xs font-semibold text-gray-600">PIN Lama
-                <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} value={currentPin} onChange={event => setCurrentPin(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+                <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} value={currentPin} onChange={event => setCurrentPin(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
               </label>
               <label className="block text-xs font-semibold text-gray-600">PIN Baru
-                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinValue} onChange={event => setChangePinValue(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinValue} onChange={event => setChangePinValue(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="6 digit" />
               </label>
               <label className="block text-xs font-semibold text-gray-600">Konfirmasi PIN Baru
-                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinConfirm} onChange={event => setChangePinConfirm(event.target.value.replace(/\\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="Ulangi 6 digit PIN baru" />
+                <input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} value={changePinConfirm} onChange={event => setChangePinConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm tracking-[0.3em] outline-none focus:border-green-500" placeholder="Ulangi 6 digit PIN baru" />
               </label>
               <div className="flex gap-2">
                 <button type="button" disabled={busy} onClick={() => { setChangePinOpen(false); setCurrentPin(''); setChangePinValue(''); setChangePinConfirm(''); setError(''); }} className="flex-1 rounded-xl border border-gray-200 p-3 text-xs font-bold text-gray-600 disabled:opacity-50">Batal</button>
