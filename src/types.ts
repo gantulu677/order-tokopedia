@@ -21,6 +21,8 @@ export interface Product {
   reviews_average: number;
   reviews_total: number;
   url: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ColorVariant {
