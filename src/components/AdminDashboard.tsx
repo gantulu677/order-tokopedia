@@ -260,7 +260,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   if (editingId || isAdding) {
     content = (
-      <div className={enableManagementTabs ? "w-full min-h-full flex flex-col bg-[#F8FAFC] relative" : "w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden"}>
+      <div className={enableManagementTabs ? "w-full min-h-0 flex-1 flex flex-col bg-[#F8FAFC] relative" : "w-full h-full min-h-0 flex flex-col bg-[#F8FAFC] relative overflow-hidden"}>
         {!enableManagementTabs && (
           <>
           {/* Sticky Header */}
@@ -284,7 +284,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
 
         {/* Scrollable Form Content */}
-        <div className={enableManagementTabs ? "p-4 space-y-5 pb-24" : "content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar"}>
+        <div className={enableManagementTabs ? "content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24" : "content-admin min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-5 pb-24 no-scrollbar"}>
           {/* Card 1: Informasi Utama */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-50 pb-3">
