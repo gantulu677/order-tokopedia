@@ -34,6 +34,7 @@ interface AdminDashboardProps {
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  role: 'admin' | 'users';
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -41,7 +42,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onAdd, 
   onEdit, 
   onDelete,
-  onRefresh 
+  onRefresh,
+  role
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -474,16 +476,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <input type="hidden" value={formData.shop_rating !== undefined ? formData.shop_rating : 4.9} />
               <input type="hidden" value={formData.reviews_average !== undefined ? formData.reviews_average : 5} />
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">URL Produk (Tokopedia)</label>
-                <input 
-                  type="text" 
-                  value={formData.url || ''} 
-                  onChange={e => updateField('url', e.target.value)}
-                  className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
-                  placeholder="https://tokopedia.link/..."
-                />
-              </div>
+              {role === 'admin' && (
+                <div>
+                  <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">URL Produk (Tokopedia)</label>
+                  <input 
+                    type="text" 
+                    value={formData.url || ''} 
+                    onChange={e => updateField('url', e.target.value)}
+                    className="w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 placeholder:text-gray-300 outline-none focus:bg-white focus:border-[#00AA5B] focus:ring-2 focus:ring-green-100 transition-all duration-200"
+                    placeholder="https://tokopedia.link/..."
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
