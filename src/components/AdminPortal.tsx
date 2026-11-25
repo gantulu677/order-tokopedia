@@ -114,7 +114,7 @@ export default function AdminPortal(props: Props) {
     localStorage.removeItem('tokopedia_admin_profile');
     localStorage.removeItem('tokopedia_admin_pin');
     localStorage.removeItem(PHONE_KEY);
-    localStorage.removeItem(PIN_KEY);
+    localStorage.removeItem('tokopedia_admin_pin');
     setProfile(null); setPassword(''); setPin('');
   };
 
