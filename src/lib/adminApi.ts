@@ -9,7 +9,7 @@ export function normalizePhone(value: string): string {
 }
 
 export async function adminApi<T = any>(action: string, payload: Record<string, unknown> = {}, token?: string): Promise<T> {
-  const savedToken = token || localStorage.getItem('tokopedia_admin_token') || '';
+  const savedToken = token || sessionStorage.getItem('tokopedia_admin_token') || '';
   const response = await fetch(`${SUPABASE_URL}/functions/v1/tokopedia-admin`, {
     method: 'POST',
     headers: {
