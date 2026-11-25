@@ -278,10 +278,12 @@ Deno.serve(async (req: Request) => {
 
     if (action === "chat-list-conversations") {
       if (account.role !== "admin") return response({ error: "Akses ditolak" }, 403);
-      const { data, error } = await db.from("admin_chat")
+      const before = String(body.before || "").trim();
+      let query = db.from("admin_chat")
         .select("phone,role,message,created_at")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+        .order("created_at", { ascending: false });
+      if (before) query = query.lt("created_at", before);
+      const { data, error } = await query.limit(500);
       if (error) return response({ error: "Gagal memuat daftar percakapan" }, 400);
       const seen = new Set<string>();
       const conversations = [];
@@ -295,7 +297,7 @@ Deno.serve(async (req: Request) => {
           createdAt: row.created_at,
         });
       }
-      return response({ conversations });
+      return response({ conversations, hasMore: (data || []).length === 500, nextCursor: data?.length === 500 ? data[data.length - 1].created_at : null });
     }
 
     if (action === "chat-get-messages") {
@@ -303,15 +305,19 @@ Deno.serve(async (req: Request) => {
         ? normalizePhone(String(body.phone || ""))
         : account.phone;
       if (!validPhone(targetPhone)) return response({ error: "Nomor percakapan tidak valid" }, 400);
-      const { data, error } = await db.from("admin_chat")
+      const before = String(body.before || "").trim();
+      let query = db.from("admin_chat")
         .select("id,phone,role,message,created_at")
         .eq("phone", targetPhone)
-        .order("created_at", { ascending: true })
-        .limit(500);
+        .order("created_at", { ascending: false });
+      if (before) query = query.lt("created_at", before);
+      const { data, error } = await query.limit(100);
       if (error) return response({ error: "Gagal memuat pesan" }, 400);
       return response({
         conversationId: await chatConversationTopicId(targetPhone),
-        messages: data || [],
+        messages: (data || []).reverse(),
+        hasMore: (data || []).length === 100,
+        nextCursor: data?.length === 100 ? data[data.length - 1].created_at : null,
       });
     }
 
