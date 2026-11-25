@@ -38,6 +38,7 @@ interface AdminDashboardProps {
   onRefresh?: () => Promise<void>;
   role: 'admin' | 'users';
   enableManagementTabs?: boolean;
+  produksLoading?: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -47,7 +48,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDelete,
   onRefresh,
   role,
-  enableManagementTabs = false
+  enableManagementTabs = false,
+  produksLoading = false
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -739,7 +741,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </tr>
                       );
                     })}
-                    {filteredProduks.length === 0 && (
+                    {produksLoading && filteredProduks.length === 0 && (
+                      <tr><td colSpan={8} className="px-4 py-12 text-center text-xs font-semibold text-gray-400">Memuat data produk...</td></tr>
+                    )}
+                    {!produksLoading && filteredProduks.length === 0 && (
                       <tr>
                         <td colSpan={8} className="px-4 py-16 text-center">
                           <Package size={28} className="mx-auto text-gray-300" />
@@ -806,7 +811,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 );
               })}
-              {filteredProduks.length === 0 && (
+              {produksLoading && filteredProduks.length === 0 && <div className="py-16 text-center text-xs font-semibold text-gray-400">Memuat data produk...</div>}
+              {!produksLoading && filteredProduks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
                   <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100"><Package size={28} /></div>
                   <div className="space-y-0.5">
