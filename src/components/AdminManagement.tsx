@@ -252,17 +252,7 @@ export default function AdminManagement({ tab, role, phone }: Props) {
   if (tab === 'bank') {
     return (
       <div className="w-full min-h-full flex flex-col bg-[#F8FAFC]">
-        <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-5">
-          <div className="flex items-center gap-2 text-[#00AA5B]">
-            <Banknote size={20} />
-            <h1 className="text-lg font-black text-gray-900">Rekening Bank</h1>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Kelola rekening pembayaran.
-          </p>
-        </header>
-
-        <main className="p-4 space-y-3">
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
           {bankError && <p className="rounded-xl bg-red-50 text-red-600 p-3 text-xs">{bankError}</p>}
           {!bankDraft && (
             <button onClick={() => setBankDraft(emptyBank())} className="w-full rounded-xl bg-[#00AA5B] text-white p-3 text-sm font-bold flex items-center justify-center gap-2">
@@ -331,18 +321,8 @@ export default function AdminManagement({ tab, role, phone }: Props) {
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col bg-[#F8FAFC]">
-      <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-4">
-        <div className="flex items-center gap-2 text-[#00AA5B]">
-          <MessageCircle size={20} />
-          <h1 className="text-lg font-black text-gray-900">Livechat</h1>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {role === 'admin' ? 'Daftar percakapan pengguna.' : 'Percakapan Anda dengan Admin.'}
-        </p>
-      </header>
-
       {role === 'admin' && !selectedPhone ? (
-        <main className="p-3 space-y-2">
+        <main className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
           {chatError && <p className="rounded-xl bg-red-50 p-3 text-xs text-red-600">{chatError}</p>}
           {conversations.map(conversation => (
             <button key={conversation.phone} onClick={() => setSelectedPhone(conversation.phone)} className="w-full rounded-xl border border-gray-100 bg-white p-3 text-left hover:border-green-200">
