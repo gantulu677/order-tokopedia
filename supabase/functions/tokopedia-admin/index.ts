@@ -61,13 +61,13 @@ async function sessionFrom(req: Request) {
   if (!ok) throw new Error("Sesi tidak valid");
   const payload = JSON.parse(new TextDecoder().decode(fromB64url(body)));
   if (!payload.exp || payload.exp < Date.now() || !payload.sub) throw new Error("Sesi kedaluwarsa");
-  const { data, error } = await db.from("admin_tokopedia").select("id,phone,role,pin").eq("id", payload.sub).maybeSingle();
+  const { data, error } = await db.from("admin_tokopedia").select("id,phone,name,role,pin").eq("id", payload.sub).maybeSingle();
   if (error || !data) throw new Error("Akun tidak ditemukan");
   return data;
 }
-async function issueSession(account: { id: string; phone: string; role: string }) {
+async function issueSession(account: { id: string; phone: string; role: string; name?: string | null }) {
   const token = await sign({ sub: account.id, phone: account.phone, role: account.role, exp: Date.now() + 12 * 60 * 60 * 1000 });
-  return { token, profile: { id: account.id, phone: account.phone, role: account.role } };
+  return { token, profile: { id: account.id, phone: account.phone, role: account.role, name: account.name ?? null } };
 }
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -78,34 +78,72 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const action = String(body.action || "");
-    if (action === "register" || action === "login" || action === "pin-login") {
+    if (["identify-phone", "register", "pin-login", "reset-pin"].includes(action)) {
       const phone = normalizePhone(body.phone);
       if (!validPhone(phone)) return response({ error: "Nomor telepon tidak valid" }, 400);
-      const { data: account, error } = await db.from("admin_tokopedia").select("id,phone,password,pin,role").eq("phone", phone).maybeSingle();
+
+      const { data: account, error: lookupError } = await db
+        .from("admin_tokopedia")
+        .select("id,phone,name,password,pin,role")
+        .eq("phone", phone)
+        .maybeSingle();
+      if (lookupError) return response({ error: "Gagal memeriksa akun" }, 500);
+
+      if (action === "identify-phone") {
+        return response({ registered: Boolean(account) });
+      }
 
       if (action === "register") {
         if (account) return response({ error: "Nomor telepon sudah terdaftar" }, 409);
+        const name = String(body.name || "").trim();
         const password = String(body.password || "");
-        const pin = String(body.pin || "");
+        if (!name) return response({ error: "Nama wajib diisi" }, 400);
         if (password.length < 8) return response({ error: "Password minimal 8 karakter" }, 400);
-        if (!/^\d{6}$/.test(pin)) return response({ error: "PIN harus 6 digit" }, 400);
+
         const { data, error: insertError } = await db.from("admin_tokopedia").insert({
-          phone, password: await hashSecret(password), pin: await hashSecret(pin), role: "users"
-        }).select("id,phone,role").single();
-        if (insertError) return response({ error: insertError.code === "23505" ? "Nomor telepon sudah terdaftar" : insertError.message }, 400);
+          phone,
+          name,
+          password: await hashSecret(password),
+          pin: null,
+          role: "users",
+        }).select("id,phone,name,role").single();
+
+        if (insertError) {
+          return response({ error: insertError.code === "23505" ? "Nomor telepon sudah terdaftar" : "Registrasi gagal" }, insertError.code === "23505" ? 409 : 400);
+        }
         return response(await issueSession(data));
       }
 
-      if (error || !account) return response({ error: "Akun tidak ditemukan atau kredensial salah" }, 401);
-      if (action === "login") {
-        if (!await verifySecret(String(body.password || ""), account.password)) return response({ error: "Akun tidak ditemukan atau kredensial salah" }, 401);
-        return response({ ...(await issueSession(account)), pinSetupRequired: !account.pin });
+      if (!account) return response({ error: "Akun tidak ditemukan atau kredensial salah" }, 401);
+
+      if (action === "pin-login") {
+        if (!await verifySecret(String(body.pin || ""), account.pin)) {
+          return response({ error: "PIN salah atau belum dibuat" }, 401);
+        }
+        return response(await issueSession(account));
       }
-      if (!await verifySecret(String(body.pin || ""), account.pin)) return response({ error: "PIN salah atau belum dibuat" }, 401);
-      return response(await issueSession(account));
+
+      if (action === "reset-pin") {
+        const password = String(body.password || "");
+        const newPin = String(body.newPin || "");
+        if (!/^\\d{6}$/.test(newPin)) return response({ error: "PIN baru harus tepat 6 digit" }, 400);
+        if (!await verifySecret(password, account.password)) {
+          return response({ error: "Password salah" }, 401);
+        }
+        const { error: updateError } = await db.from("admin_tokopedia")
+          .update({ pin: await hashSecret(newPin) })
+          .eq("id", account.id);
+        if (updateError) return response({ error: "Gagal memperbarui PIN" }, 400);
+        return response({ success: true });
+      }
     }
 
     const account = await sessionFrom(req);
+
+    if (action === "get-session") {
+      return response({ profile: { id: account.id, phone: account.phone, role: account.role, name: account.name ?? null } });
+    }
+
     if (action === "set-pin" || action === "change-pin") {
       const nextPin = String(body.newPin || "");
       if (!/^\d{6}$/.test(nextPin)) return response({ error: "PIN baru harus 6 digit" }, 400);
