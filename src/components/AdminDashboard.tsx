@@ -635,7 +635,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* Grid Actions */}
-                <div className="grid grid-cols-3 gap-2 border-t border-gray-100/50 pt-3">
+                <div className={`grid ${role === 'admin' ? 'grid-cols-3' : 'grid-cols-2'} gap-2 border-t border-gray-100/50 pt-3`}>
                   <button 
                     onClick={() => window.open(`/${p.produks_id}`, '_blank')} 
                     className="flex items-center justify-center gap-1.5 h-10 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-slate-100/50" 
@@ -652,14 +652,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Edit3 size={12} className="stroke-[2.5]" />
                     <span>Ubah</span>
                   </button>
-                  <button 
-                    onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
-                    className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" 
-                    title="Hapus"
-                  >
-                    <Trash2 size={12} className="stroke-[2.5]" />
-                    <span>Hapus</span>
-                  </button>
+                  {role === 'admin' && (
+                    <button 
+                      onClick={() => { if(confirm('Hapus produk ini?')) onDelete(p.produks_id) }} 
+                      className="flex items-center justify-center gap-1.5 h-10 bg-rose-50 hover:bg-rose-100/80 text-rose-600 text-[10px] font-extrabold uppercase tracking-wider rounded-xl transition active:scale-[0.97] border border-red-100/20" 
+                      title="Hapus"
+                    >
+                      <Trash2 size={12} className="stroke-[2.5]" />
+                      <span>Hapus</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
