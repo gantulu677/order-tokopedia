@@ -25,7 +25,7 @@ export async function adminApi<T = any>(action: string, payload: Record<string, 
 }
 
 export async function adminUploadImage(file: File): Promise<{ path: string; publicUrl: string }> {
-  const token = localStorage.getItem('tokopedia_admin_token') || '';
+  const token = sessionStorage.getItem('tokopedia_admin_token') || '';
   if (!token) throw new Error('Sesi admin tidak ditemukan. Silakan login kembali.');
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
