@@ -216,7 +216,7 @@ export default function AdminPortal(props: Props) {
     const isKnownRoute = isProducts || isProfile || isBank || isLiveChat;
     return <div className="w-full h-full min-h-full flex flex-col bg-[#F8FAFC]">
       <header className="shrink-0 flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">Admin Dashboard</h1></div>
+        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-[#00AA5B]">Tokopedia</p><h1 className="text-sm font-black text-gray-900">{isProducts ? (currentPath === '/admin' ? 'Produk' : currentPath.endsWith('/new') ? 'Tambah Produk' : 'Ubah Produk') : isBank ? 'Rekening Bank' : isLiveChat ? 'Livechat' : isProfile ? 'Profil Akun' : 'Admin Dashboard'}</h1></div>
         <button type="button" onClick={() => navigate('/admin/profile')} className={'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ' + (isProfile ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600')} aria-current={isProfile ? 'page' : undefined}><ShieldCheck size={15}/> Profil</button>
       </header>
       <main className="content-admin min-h-0 flex-1 overflow-y-auto">
@@ -253,11 +253,13 @@ export default function AdminPortal(props: Props) {
             </form>}
           </section>}
       </main>
+      {!isLiveChat && (
       <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
         <button onClick={() => navigate('/admin')} aria-current={activeTab === 'produk' ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'produk' ? 'text-[#00AA5B]' : 'text-gray-400')}><Package size={18}/> Produk</button>
         <button onClick={() => navigate('/admin/bank')} aria-current={isBank ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isBank ? 'text-[#00AA5B]' : 'text-gray-400')}><Landmark size={18}/> Bank</button>
         <button onClick={() => navigate('/admin/live-chat')} aria-current={isLiveChat ? 'page' : undefined} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (isLiveChat ? 'text-[#00AA5B]' : 'text-gray-400')}><MessageCircle size={18}/> Livechat</button>
       </nav>
+      )}
     </div>;
   }
 
