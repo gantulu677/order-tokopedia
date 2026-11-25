@@ -25,6 +25,7 @@ export default function AdminPortal(props: Props) {
   const [newPin, setNewPin] = useState('');
   const [pendingToken, setPendingToken] = useState('');
   const [pinSetup, setPinSetup] = useState(false);
+  const [confirmExistingPin, setConfirmExistingPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
@@ -66,14 +67,10 @@ export default function AdminPortal(props: Props) {
         applySession(result);
       } else {
         const result = await adminApi('login', { phone: normalizedPhone, password }, '');
-        if (result.pinSetupRequired) {
-          setPendingToken(result.token);
-          setPhone(normalizedPhone);
-          setPinSetup(true);
-        } else {
-          applySession(result);
-          setPhone(normalizedPhone);
-        }
+        setPendingToken(result.token);
+        setPhone(normalizedPhone);
+        setConfirmExistingPin(!result.pinSetupRequired);
+        setPinSetup(true);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Autentikasi gagal');
@@ -85,11 +82,17 @@ export default function AdminPortal(props: Props) {
     if (!/^\d{6}$/.test(newPin)) { setError('PIN harus tepat 6 digit'); return; }
     setBusy(true); setError('');
     try {
-      await adminApi('set-pin', { newPin }, pendingToken);
-      const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
-      localStorage.setItem(PHONE_KEY, normalizePhone(phone));
-      applySession(result);
+      if (confirmExistingPin) {
+        const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
+        applySession(result);
+      } else {
+        await adminApi('set-pin', { newPin }, pendingToken);
+        const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
+        applySession(result);
+      }
+      setNewPin('');
       setPinSetup(false);
+      setConfirmExistingPin(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan PIN');
     } finally { setBusy(false); }
@@ -137,12 +140,12 @@ export default function AdminPortal(props: Props) {
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mb-3"><LockKeyhole size={28}/></div>
           <h1 className="text-xl font-black text-gray-900">Tokopedia Admin</h1>
-          <p className="text-xs text-gray-500 mt-1">{pinSetup ? 'Buat PIN pertama untuk akun ini' : mode === 'login' ? 'Masuk menggunakan nomor telepon' : 'Daftarkan akun pengguna baru'}</p>
+          <p className="text-xs text-gray-500 mt-1">{pinSetup ? (confirmExistingPin ? 'Konfirmasi PIN akun' : 'Buat PIN pertama untuk akun ini') : mode === 'login' ? 'Masuk menggunakan nomor telepon' : 'Daftarkan akun pengguna baru'}</p>
         </div>
         {pinSetup ? (
           <form onSubmit={saveFirstPin} className="space-y-4">
-            <label className="block text-xs font-bold text-gray-600">PIN baru (6 digit)<input autoFocus type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center text-2xl tracking-[0.5em]" placeholder="••••••"/></label>
-            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Menyimpan...' : 'Simpan PIN dan lanjutkan'}</button>
+            <label className="block text-xs font-bold text-gray-600">{confirmExistingPin ? 'PIN akun (6 digit)' : 'PIN baru (6 digit)'}<input autoFocus type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center text-2xl tracking-[0.5em]" placeholder="••••••"/></label>
+            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Memverifikasi...' : confirmExistingPin ? 'Verifikasi PIN dan masuk' : 'Simpan PIN dan lanjutkan'}</button>
           </form>
         ) : (
           <form onSubmit={submit} className="space-y-4">
