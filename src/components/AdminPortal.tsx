@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, KeyRound, LockKeyhole, LogOut, ShieldCheck, Package, Landmark, MessageCircle } from 'lucide-react';
 import AdminDashboard from './AdminDashboard';
+import AdminManagement from './AdminManagement';
 import { adminApi, normalizePhone } from '../lib/adminApi';
 import { Product } from '../types';
 
@@ -11,6 +12,7 @@ type Props = {
   onEdit: (product: Product) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
+  enableManagementTabs?: boolean;
 };
 type Step = 'phone' | 'register' | 'set-pin' | 'login' | 'recover';
 
@@ -23,6 +25,7 @@ const buttonClass = 'w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold dis
 
 export default function AdminPortal(props: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeTab, setActiveTab] = useState<'produk' | 'bank' | 'livechat'>('produk');
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState(localStorage.getItem(PHONE_KEY) || '');
   const [name, setName] = useState('');
@@ -184,12 +187,29 @@ export default function AdminPortal(props: Props) {
   if (!ready) return <div className="w-full h-full min-h-full flex flex-col items-center justify-center text-sm text-gray-500">Memulihkan sesi admin...</div>;
 
   if (profile) return (
-    <div className="relative w-full h-full min-h-full flex flex-col">
+    <div className="relative w-full h-full min-h-full flex flex-col bg-white">
       <div className="absolute top-3 right-3 z-30 flex gap-2">
         <button onClick={changePin} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><KeyRound size={14}/> Ubah PIN</button>
         <button onClick={logout} className="bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><LogOut size={14}/> Keluar</button>
       </div>
-      <AdminDashboard {...props} role={profile.role} />
+      <main className="min-h-0 flex-1">
+        {activeTab === 'produk' || !props.enableManagementTabs
+          ? <AdminDashboard {...props} role={profile.role} />
+          : <AdminManagement tab={activeTab} role={profile.role} phone={profile.phone} />}
+      </main>
+      {props.enableManagementTabs && (
+        <nav className="shrink-0 grid grid-cols-3 border-t border-gray-100 bg-white pb-[env(safe-area-inset-bottom)]">
+          <button onClick={() => setActiveTab('produk')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'produk' ? 'text-[#00AA5B]' : 'text-gray-400')}>
+            <Package size={18} /> Produk
+          </button>
+          <button onClick={() => setActiveTab('bank')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'bank' ? 'text-[#00AA5B]' : 'text-gray-400')}>
+            <Landmark size={18} /> Bank
+          </button>
+          <button onClick={() => setActiveTab('livechat')} className={'flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold ' + (activeTab === 'livechat' ? 'text-[#00AA5B]' : 'text-gray-400')}>
+            <MessageCircle size={18} /> Livechat
+          </button>
+        </nav>
+      )}
     </div>
   );
 
