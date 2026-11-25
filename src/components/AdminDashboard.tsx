@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Product, ColorVariant, StorageVariant } from '../types';
 import { initialProduksList } from '../data';
+import { adminUploadImage } from '../lib/adminApi';
 
 const generateProdukId = () => {
   const chars = 'asdf0123456789';
@@ -147,88 +148,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [uploading, setUploading] = useState(false);
 
-  const compressAndConvertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            resolve(dataUrl);
-          } else {
-            resolve(event.target?.result as string);
-          }
-        };
-        img.onerror = (err) => {
-          reject(err);
-        };
-      };
-      reader.onerror = (err) => {
-        reject(err);
-      };
-    });
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(file.type)) {
+      alert('Format gambar harus JPEG, PNG, WebP, GIF, atau AVIF.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Ukuran gambar maksimal 8 MB.');
+      e.target.value = '';
+      return;
+    }
     setUploading(true);
-    const uploadData = new FormData();
-    uploadData.append('file', file);
-    uploadData.append('upload_preset', 'tokopedia');
-
     try {
-      const response = await fetch('https://api.cloudinary.com/v1_1/dgcfyiqco/image/upload', {
-        method: 'POST',
-        body: uploadData,
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.secure_url) {
-        updateField('media', [...(formData.media || []), data.secure_url]);
-      } else {
-        throw new Error('No secure_url found in Cloudinary response');
-      }
+      const uploaded = await adminUploadImage(file);
+      updateField('media', [...(formData.media || []).filter(Boolean), uploaded.publicUrl]);
     } catch (error) {
-      console.warn('Cloudinary upload failed, falling back to local base64 compression:', error);
-      try {
-        const base64Data = await compressAndConvertToBase64(file);
-        updateField('media', [...(formData.media || []), base64Data]);
-      } catch (fallbackError) {
-        console.error('Local compression fallback failed:', fallbackError);
-        alert('Gagal memuat gambar: ' + (fallbackError instanceof Error ? fallbackError.message : String(fallbackError)));
-      }
+      console.error('Supabase Storage upload failed:', error);
+      alert('Gagal mengunggah gambar: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setUploading(false);
-      // Reset input
       e.target.value = '';
     }
   };
