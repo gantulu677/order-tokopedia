@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { LockKeyhole, ShieldCheck, UserRound, LogOut, KeyRound } from 'lucide-react';
+import { ArrowLeft, KeyRound, LockKeyhole, LogOut, ShieldCheck } from 'lucide-react';
 import AdminDashboard from './AdminDashboard';
 import { adminApi, normalizePhone } from '../lib/adminApi';
 import { Product } from '../types';
 
-type Profile = { id: string; phone: string; role: 'admin' | 'users' };
+type Profile = { id: string; phone: string; role: 'admin' | 'users'; name?: string | null };
 type Props = {
   produks: Product[];
   onAdd: (product: Product) => Promise<void>;
@@ -12,109 +12,147 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
 };
+type Step = 'phone' | 'register' | 'set-pin' | 'login' | 'recover';
 
 const PHONE_KEY = 'tokopedia_admin_phone';
-const PIN_KEY = 'tokopedia_admin_pin';
 const TOKEN_KEY = 'tokopedia_admin_token';
 const PROFILE_KEY = 'tokopedia_admin_profile';
+const LEGACY_PIN_KEY = 'tokopedia_admin_pin';
+const inputClass = 'mt-1 w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-green-100 focus:border-green-500';
+const buttonClass = 'w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold disabled:opacity-60';
 
 export default function AdminPortal(props: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<Step>('phone');
+  const [phone, setPhone] = useState(localStorage.getItem(PHONE_KEY) || '');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [pendingToken, setPendingToken] = useState('');
-  const [pinSetup, setPinSetup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [ready, setReady] = useState(false);
 
-  const applySession = (result: any) => {
-    const previousPhone = localStorage.getItem(PHONE_KEY);
-    if (previousPhone !== result.profile.phone) localStorage.removeItem(PIN_KEY);
+  const clearStoredSession = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(PROFILE_KEY);
+  };
+
+  const applySession = (result: { token: string; profile: Profile }) => {
     localStorage.setItem(PHONE_KEY, result.profile.phone);
     localStorage.setItem(TOKEN_KEY, result.token);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile));
+    setPhone(result.profile.phone);
     setProfile(result.profile);
     setError('');
+    setNotice('');
   };
 
   useEffect(() => {
     let active = true;
     const restore = async () => {
-      const savedPhone = localStorage.getItem(PHONE_KEY);
-      const savedPin = localStorage.getItem(PIN_KEY);
-      if (savedPhone && savedPin) {
+      localStorage.removeItem(LEGACY_PIN_KEY);
+      const savedPhone = localStorage.getItem(PHONE_KEY) || '';
+      const token = localStorage.getItem(TOKEN_KEY) || '';
+      if (savedPhone) setPhone(savedPhone);
+      if (token) {
         try {
-          const result = await adminApi('pin-login', { phone: savedPhone, pin: savedPin }, '');
-          if (active) applySession(result);
+          const result = await adminApi<{ profile: Profile }>('get-session', {}, token);
+          if (active) setProfile(result.profile);
         } catch {
-          localStorage.removeItem(PIN_KEY);
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(PROFILE_KEY);
-          if (active) setPhone(savedPhone);
+          clearStoredSession();
+          if (active) setStep('phone');
         }
       }
       if (active) setReady(true);
     };
-    restore();
+    void restore();
     return () => { active = false; };
   }, []);
 
-  const submit = async (event: React.FormEvent) => {
+  const runAction = async (event: React.FormEvent, action: () => Promise<void>) => {
     event.preventDefault();
-    setBusy(true); setError('');
+    setBusy(true);
+    setError('');
+    setNotice('');
     try {
-      const normalizedPhone = normalizePhone(phone);
-      if (!/^62\d{8,13}$/.test(normalizedPhone)) throw new Error('Nomor telepon tidak valid');
-      if (mode === 'register') {
-        if (!/^\d{6}$/.test(pin)) throw new Error('PIN harus tepat 6 digit');
-        const result = await adminApi('register', { phone: normalizedPhone, password, pin }, '');
-        localStorage.setItem(PHONE_KEY, normalizedPhone);
-        localStorage.setItem(PIN_KEY, pin);
-        applySession(result);
-      } else {
-        const result = await adminApi('login', { phone: normalizedPhone, password }, '');
-        if (result.pinSetupRequired) {
-          setPendingToken(result.token);
-          setPhone(normalizedPhone);
-          setPinSetup(true);
-        } else {
-          applySession(result);
-          setPhone(normalizedPhone);
-        }
-      }
+      await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Autentikasi gagal');
-    } finally { setBusy(false); }
+      setError(e instanceof Error ? e.message : 'Permintaan gagal diproses');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const saveFirstPin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!/^\d{6}$/.test(newPin)) { setError('PIN harus tepat 6 digit'); return; }
-    setBusy(true); setError('');
-    try {
-      await adminApi('set-pin', { newPin }, pendingToken);
-      const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
-      localStorage.setItem(PHONE_KEY, normalizePhone(phone));
-      localStorage.setItem(PIN_KEY, newPin);
-      applySession(result);
-      setPinSetup(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan PIN');
-    } finally { setBusy(false); }
-  };
+  const identifyPhone = (event: React.FormEvent) => runAction(event, async () => {
+    const normalized = normalizePhone(phone);
+    if (!/^62\d{8,13}$/.test(normalized)) throw new Error('Nomor telepon tidak valid');
+    const result = await adminApi<{ registered: boolean }>('identify-phone', { phone: normalized }, '');
+    setPhone(normalized);
+    localStorage.setItem(PHONE_KEY, normalized);
+    setStep(result.registered ? 'login' : 'register');
+  });
+
+  const register = (event: React.FormEvent) => runAction(event, async () => {
+    if (!name.trim()) throw new Error('Nama wajib diisi');
+    if (password.length < 8) throw new Error('Password minimal 8 karakter');
+    const result = await adminApi<{ token: string }>('register', {
+      phone: normalizePhone(phone), name: name.trim(), password,
+    }, '');
+    setPendingToken(result.token);
+    setPassword('');
+    setStep('set-pin');
+  });
+
+  const createPin = (event: React.FormEvent) => runAction(event, async () => {
+    if (!/^\d{6}$/.test(newPin)) throw new Error('PIN harus tepat 6 digit');
+    if (newPin !== confirmPin) throw new Error('Konfirmasi PIN tidak sama');
+    if (!pendingToken) throw new Error('Sesi registrasi tidak ditemukan. Silakan ulangi registrasi.');
+    await adminApi('set-pin', { newPin }, pendingToken);
+    setPendingToken('');
+    clearStoredSession();
+    setNewPin('');
+    setConfirmPin('');
+    setPin('');
+    setStep('login');
+    setNotice('Registrasi berhasil. Silakan masuk menggunakan PIN baru.');
+  });
+
+  const login = (event: React.FormEvent) => runAction(event, async () => {
+    if (!/^\d{6}$/.test(pin)) throw new Error('PIN harus tepat 6 digit');
+    const result = await adminApi<{ token: string; profile: Profile }>('pin-login', {
+      phone: normalizePhone(phone), pin,
+    }, '');
+    applySession(result);
+    setPin('');
+  });
+
+  const recoverPin = (event: React.FormEvent) => runAction(event, async () => {
+    if (!password) throw new Error('Password wajib diisi');
+    if (!/^\d{6}$/.test(newPin)) throw new Error('PIN baru harus tepat 6 digit');
+    if (newPin !== confirmPin) throw new Error('Konfirmasi PIN tidak sama');
+    await adminApi('reset-pin', { phone: normalizePhone(phone), password, newPin }, '');
+    setPassword('');
+    setNewPin('');
+    setConfirmPin('');
+    setPin('');
+    setStep('login');
+    setNotice('PIN berhasil diperbarui. Silakan login menggunakan PIN baru.');
+  });
 
   const changePin = async () => {
     const currentPin = window.prompt('Masukkan PIN lama (6 digit):') || '';
     if (!currentPin) return;
     const nextPin = window.prompt('Masukkan PIN baru (6 digit):') || '';
-    if (!/^\d{6}$/.test(nextPin)) { window.alert('PIN baru harus tepat 6 digit'); return; }
+    if (!/^\d{6}$/.test(nextPin)) {
+      window.alert('PIN baru harus tepat 6 digit');
+      return;
+    }
     try {
       await adminApi('change-pin', { currentPin, newPin: nextPin });
-      localStorage.setItem(PIN_KEY, nextPin);
       window.alert('PIN berhasil diperbarui.');
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Gagal mengubah PIN');
@@ -122,11 +160,25 @@ export default function AdminPortal(props: Props) {
   };
 
   const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(PHONE_KEY);
-    localStorage.removeItem(PIN_KEY);
-    setProfile(null); setPassword(''); setPin('');
+    clearStoredSession();
+    localStorage.removeItem(LEGACY_PIN_KEY);
+    setProfile(null);
+    setPassword('');
+    setPin('');
+    setName('');
+    setStep('phone');
+    setError('');
+    setNotice('');
+  };
+
+  const goToPhone = () => {
+    setStep('phone');
+    setPassword('');
+    setPin('');
+    setNewPin('');
+    setConfirmPin('');
+    setError('');
+    setNotice('');
   };
 
   if (!ready) return <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Memulihkan sesi admin...</div>;
@@ -142,36 +194,104 @@ export default function AdminPortal(props: Props) {
   );
 
   const phoneDigits = phone.replace(/\D/g, '').replace(/^62/, '').replace(/^0/, '');
+  const headings: Record<Step, string> = {
+    phone: 'Masuk atau daftar akun',
+    register: 'Daftarkan akun baru',
+    'set-pin': 'Buat PIN enam digit',
+    login: 'Masukkan PIN',
+    recover: 'Pulihkan PIN',
+  };
+  const subtitles: Record<Step, string> = {
+    phone: 'Masukkan nomor telepon untuk melanjutkan',
+    register: 'Lengkapi informasi akun pengguna baru',
+    'set-pin': 'Tentukan PIN yang akan digunakan untuk login',
+    login: 'Masuk menggunakan PIN akun Anda',
+    recover: 'Verifikasi password untuk membuat PIN baru',
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-3xl p-7 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mb-3"><LockKeyhole size={28}/></div>
           <h1 className="text-xl font-black text-gray-900">Tokopedia Admin</h1>
-          <p className="text-xs text-gray-500 mt-1">{pinSetup ? 'Buat PIN pertama untuk akun ini' : mode === 'login' ? 'Masuk menggunakan nomor telepon' : 'Daftarkan akun pengguna baru'}</p>
+          <p className="text-xs text-gray-500 mt-1">{subtitles[step]}</p>
         </div>
-        {pinSetup ? (
-          <form onSubmit={saveFirstPin} className="space-y-4">
-            <label className="block text-xs font-bold text-gray-600">PIN baru (6 digit)<input autoFocus type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center text-2xl tracking-[0.5em]" placeholder="••••••"/></label>
-            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Menyimpan...' : 'Simpan PIN dan lanjutkan'}</button>
-          </form>
-        ) : (
-          <form onSubmit={submit} className="space-y-4">
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-gray-900 text-center">{headings[step]}</h2>
+          {step !== 'phone' && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-500">
+              <span>+{normalizePhone(phone)}</span>
+              {step !== 'set-pin' && <button type="button" onClick={goToPhone} className="text-green-700 font-bold">Ganti</button>}
+            </div>
+          )}
+        </div>
+
+        {step === 'phone' && (
+          <form onSubmit={identifyPhone} className="space-y-4">
             <label className="block text-xs font-bold text-gray-600">Nomor telepon
-              <div className="flex mt-1 border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-green-100">
+              <div className="flex mt-1 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-green-100">
                 <span className="px-3 py-3 bg-gray-50 border-r text-gray-600">+62</span>
-                <input required inputMode="tel" value={phoneDigits} onChange={e=>setPhone(e.target.value.replace(/\D/g,'').replace(/^62/,'').replace(/^0/,''))} className="flex-1 min-w-0 p-3 outline-none" placeholder="81234567890"/>
+                <input required autoFocus inputMode="tel" value={phoneDigits} onChange={e=>setPhone(e.target.value.replace(/\D/g,'').replace(/^62/,'').replace(/^0/,''))} className="flex-1 min-w-0 p-3 outline-none" placeholder="81234567890"/>
               </div>
             </label>
-            <label className="block text-xs font-bold text-gray-600">Password<input required type="password" value={password} onChange={e=>setPassword(e.target.value)} className="mt-1 w-full border rounded-xl p-3" placeholder="Minimal 8 karakter"/></label>
-            {mode === 'register' && <label className="block text-xs font-bold text-gray-600">PIN 6 digit<input required type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center tracking-[0.5em]" placeholder="••••••"/></label>}
-            {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg p-3">{error}</p>}
-            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Memproses...' : mode === 'login' ? 'Masuk' : 'Daftar akun'}</button>
-            <button type="button" onClick={()=>{setMode(mode==='login'?'register':'login');setError('');}} className="w-full text-sm text-green-700 font-bold py-2">{mode==='login'?'Belum punya akun? Daftar':'Sudah punya akun? Masuk'}</button>
+            <button disabled={busy} className={buttonClass}>{busy ? 'Memeriksa...' : 'Lanjutkan'}</button>
           </form>
         )}
-        {error && pinSetup && <p className="text-xs text-red-600 bg-red-50 rounded-lg p-3 mt-3">{error}</p>}
-        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> PIN tersimpan di perangkat ini untuk login berikutnya</div>
+
+        {step === 'register' && (
+          <form onSubmit={register} className="space-y-4">
+            <label className="block text-xs font-bold text-gray-600">Nama
+              <input required autoFocus value={name} onChange={e=>setName(e.target.value)} className={inputClass} placeholder="Nama lengkap"/>
+            </label>
+            <label className="block text-xs font-bold text-gray-600">Password
+              <input required type="password" autoComplete="new-password" minLength={8} value={password} onChange={e=>setPassword(e.target.value)} className={inputClass} placeholder="Minimal 8 karakter"/>
+            </label>
+            <button disabled={busy} className={buttonClass}>{busy ? 'Mendaftarkan...' : 'Daftar akun'}</button>
+          </form>
+        )}
+
+        {step === 'set-pin' && (
+          <form onSubmit={createPin} className="space-y-4">
+            <label className="block text-xs font-bold text-gray-600">PIN baru (6 digit)
+              <input required autoFocus type="password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className={inputClass + ' text-center text-2xl tracking-[0.5em]'} placeholder="••••••"/>
+            </label>
+            <label className="block text-xs font-bold text-gray-600">Konfirmasi PIN
+              <input required type="password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={confirmPin} onChange={e=>setConfirmPin(e.target.value.replace(/\D/g,'').slice(0,6))} className={inputClass + ' text-center text-2xl tracking-[0.5em]'} placeholder="••••••"/>
+            </label>
+            <button disabled={busy} className={buttonClass}>{busy ? 'Menyimpan...' : 'Simpan PIN'}</button>
+          </form>
+        )}
+
+        {step === 'login' && (
+          <form onSubmit={login} className="space-y-4">
+            <label className="block text-xs font-bold text-gray-600">PIN (6 digit)
+              <input required autoFocus type="password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,'').slice(0,6))} className={inputClass + ' text-center text-2xl tracking-[0.5em]'} placeholder="••••••"/>
+            </label>
+            <button disabled={busy} className={buttonClass}>{busy ? 'Memverifikasi...' : 'Masuk ke Dashboard'}</button>
+            <button type="button" onClick={()=>{setStep('recover');setError('');setNotice('');}} className="w-full text-sm text-green-700 font-bold py-2">Lupa PIN?</button>
+          </form>
+        )}
+
+        {step === 'recover' && (
+          <form onSubmit={recoverPin} className="space-y-4">
+            <label className="block text-xs font-bold text-gray-600">Password akun
+              <input required autoFocus type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} className={inputClass} placeholder="Masukkan password akun"/>
+            </label>
+            <label className="block text-xs font-bold text-gray-600">PIN baru (6 digit)
+              <input required type="password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className={inputClass + ' text-center text-2xl tracking-[0.5em]'} placeholder="••••••"/>
+            </label>
+            <label className="block text-xs font-bold text-gray-600">Konfirmasi PIN baru
+              <input required type="password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={confirmPin} onChange={e=>setConfirmPin(e.target.value.replace(/\D/g,'').slice(0,6))} className={inputClass + ' text-center text-2xl tracking-[0.5em]'} placeholder="••••••"/>
+            </label>
+            <button disabled={busy} className={buttonClass}>{busy ? 'Memverifikasi...' : 'Verifikasi dan ubah PIN'}</button>
+            <button type="button" onClick={()=>{setStep('login');setPassword('');setNewPin('');setConfirmPin('');setError('');}} className="w-full text-sm text-gray-500 font-bold py-2 flex items-center justify-center gap-1"><ArrowLeft size={14}/> Kembali ke login</button>
+          </form>
+        )}
+
+        {error && <p role="alert" className="text-xs text-red-600 bg-red-50 rounded-lg p-3 mt-4">{error}</p>}
+        {notice && <p role="status" className="text-xs text-green-700 bg-green-50 rounded-lg p-3 mt-4">{notice}</p>}
+        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> Autentikasi diverifikasi oleh server</div>
       </div>
     </div>
   );
