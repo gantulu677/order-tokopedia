@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
 
       if (action === "pin-login") {
         const submittedPin = String(body.pin || "");
-        if (!/^\\d{6}$/.test(submittedPin)) return response({ error: "PIN harus tepat 6 digit" }, 400);
+        if (!/^\d{6}$/.test(submittedPin)) return response({ error: "PIN harus tepat 6 digit" }, 400);
         if (!await verifySecret(submittedPin, account.pin)) {
           return response({ error: "PIN salah atau belum dibuat" }, 401);
         }
@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
       if (action === "reset-pin") {
         const password = String(body.password || "");
         const newPin = String(body.newPin || "");
-        if (!/^\\d{6}$/.test(newPin)) return response({ error: "PIN baru harus tepat 6 digit" }, 400);
+        if (!/^\d{6}$/.test(newPin)) return response({ error: "PIN baru harus tepat 6 digit" }, 400);
         if (!await verifySecret(password, account.password)) {
           return response({ error: "Password salah" }, 401);
         }
