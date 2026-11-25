@@ -323,10 +323,7 @@ export default function Checkout({ produks, onBack }: CheckoutProps) {
   };
 
   const startPaymentProcess = () => {
-    setCheckoutStep('processing');
-    setTimeout(() => {
-      setCheckoutStep('success');
-    }, 2500);
+    window.alert('Pembayaran belum tersedia. Checkout baru dapat digunakan setelah integrasi backend order dan verifikasi Midtrans diaktifkan.');
   };
 
   const formatCurrency = (amount: number) => {

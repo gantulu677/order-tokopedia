@@ -60,9 +60,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
     const fetchProductAndExternal = async () => {
       try {
         setLoading(true);
-        const externalPromise = fetch('https://opensheet.elk.sh/1nC4LmJylqWXumCX8yqNzE03dYgXaxKXIxuAY56vAk8Q/Sheet2').then(res => res.json());
-        
-        await new Promise(resolve => setTimeout(resolve, 600));
+        const externalPromise = fetch('https://opensheet.elk.sh/1nC4LmJylqWXumCX8yqNzE03dYgXaxKXIxuAY56vAk8Q/Sheet2')
+          .then(res => { if (!res.ok) throw new Error('External recommendations unavailable'); return res.json(); })
+          .catch(err => { console.warn('External recommendations unavailable:', err); return []; });
         
         const produksId = produks_id || produks[0]?.produks_id;
         
@@ -73,7 +73,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
         }
 
         const [extData] = await Promise.all([externalPromise]);
-        setExternalProducts(extData);
+        setExternalProducts(Array.isArray(extData) ? extData : []);
 
         const mappedProduct = {
           id: data.produks_id,
@@ -101,10 +101,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
             image: data.shop_image,
             isOfficial: !!data.shop_verified
           },
-          reviews: [
-            { id: 1, user: "Budi S.", rating: 5, comment: "Barang original, sampai dengan selamat. Packing kayu aman banget!", date: "2 hari lalu" },
-            { id: 2, user: "Andi R.", rating: 5, comment: "Admin responsif, pengiriman cepat pake instant langsung sampai.", date: "5 hari lalu" }
-          ],
+          reviews: [],
           rating_average: data.reviews_average || 0,
           total_reviews: data.reviews_total || 0,
           url_tokopedia: data.url
@@ -120,30 +117,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
     };
 
     fetchProductAndExternal();
-  }, [produks]);
-
-  // Prevent Zoom
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) e.preventDefault();
-    };
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 1) e.preventDefault();
-    };
-    const handleKeydown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault();
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
-    window.addEventListener('keydown', handleKeydown);
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('keydown', handleKeydown);
-    };
-  }, []);
+  }, [produks, produks_id]);
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     const target = e.currentTarget;

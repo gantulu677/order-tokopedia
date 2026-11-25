@@ -1,5 +1,4 @@
-const SUPABASE_URL = 'https://bkyqbbigfvfaobblxziu.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_HIzGXC7XaboKJQzF8sztiQ_Qoh4B4Gr';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './supabase';
 
 export function normalizePhone(value: string): string {
   let digits = String(value || '').replace(/\D/g, '');
@@ -8,13 +7,19 @@ export function normalizePhone(value: string): string {
   return `62${digits}`;
 }
 
-export async function adminApi<T = any>(action: string, payload: Record<string, unknown> = {}, token?: string): Promise<T> {
-  const savedToken = token || localStorage.getItem('tokopedia_admin_token') || '';
+export async function adminApi<T = any>(
+  action: string,
+  payload: Record<string, unknown> = {},
+  token?: string,
+): Promise<T> {
+  const savedToken = token !== undefined
+    ? token
+    : sessionStorage.getItem('tokopedia_admin_token') || '';
   const response = await fetch(`${SUPABASE_URL}/functions/v1/tokopedia-admin`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      apikey: SUPABASE_KEY,
+      apikey: SUPABASE_PUBLISHABLE_KEY,
       ...(savedToken ? { Authorization: `Bearer ${savedToken}` } : {}),
     },
     body: JSON.stringify({ action, ...payload }),
@@ -25,15 +30,24 @@ export async function adminApi<T = any>(action: string, payload: Record<string, 
 }
 
 export async function adminUploadImage(file: File): Promise<{ path: string; publicUrl: string }> {
-  const token = localStorage.getItem('tokopedia_admin_token') || '';
+  const token = sessionStorage.getItem('tokopedia_admin_token') || '';
   if (!token) throw new Error('Sesi admin tidak ditemukan. Silakan login kembali.');
+
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Gagal membaca file gambar.'));
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('Gagal membaca file gambar.'));
     reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
     reader.readAsDataURL(file);
   });
+
   const encoded = dataUrl.split(',')[1];
   if (!encoded) throw new Error('Data gambar tidak valid.');
-  return adminApi('upload-image', { fileName: file.name, fileType: file.type, fileBase64: encoded }, token);
+
+  return adminApi('upload-image', {
+    fileName: file.name,
+    fileType: file.type,
+    fileBase64: encoded,
+  }, token);
 }

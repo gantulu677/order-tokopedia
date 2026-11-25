@@ -5,8 +5,10 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  const isVercel = process.env.VERCEL === '1';
   return {
-    base: mode === 'production' ? '/order-tokopedia/' : '/',
+    // GitHub Pages uses a repository subpath; Vercel custom domains use the domain root.
+    base: isVercel ? '/' : mode === 'production' ? '/order-tokopedia/' : '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

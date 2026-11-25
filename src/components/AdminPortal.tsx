@@ -14,9 +14,7 @@ type Props = {
 };
 
 const PHONE_KEY = 'tokopedia_admin_phone';
-const PIN_KEY = 'tokopedia_admin_pin';
 const TOKEN_KEY = 'tokopedia_admin_token';
-const PROFILE_KEY = 'tokopedia_admin_profile';
 
 export default function AdminPortal(props: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -27,16 +25,14 @@ export default function AdminPortal(props: Props) {
   const [newPin, setNewPin] = useState('');
   const [pendingToken, setPendingToken] = useState('');
   const [pinSetup, setPinSetup] = useState(false);
+  const [confirmExistingPin, setConfirmExistingPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
 
   const applySession = (result: any) => {
-    const previousPhone = localStorage.getItem(PHONE_KEY);
-    if (previousPhone !== result.profile.phone) localStorage.removeItem(PIN_KEY);
     localStorage.setItem(PHONE_KEY, result.profile.phone);
-    localStorage.setItem(TOKEN_KEY, result.token);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile));
+    sessionStorage.setItem(TOKEN_KEY, result.token);
     setProfile(result.profile);
     setError('');
   };
@@ -44,19 +40,14 @@ export default function AdminPortal(props: Props) {
   useEffect(() => {
     let active = true;
     const restore = async () => {
+      // Never persist or replay a PIN from browser storage.
+      // A fresh password login is required when the page is reopened.
       const savedPhone = localStorage.getItem(PHONE_KEY);
-      const savedPin = localStorage.getItem(PIN_KEY);
-      if (savedPhone && savedPin) {
-        try {
-          const result = await adminApi('pin-login', { phone: savedPhone, pin: savedPin }, '');
-          if (active) applySession(result);
-        } catch {
-          localStorage.removeItem(PIN_KEY);
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(PROFILE_KEY);
-          if (active) setPhone(savedPhone);
-        }
-      }
+      sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('tokopedia_admin_profile');
+      localStorage.removeItem('tokopedia_admin_pin');
+      if (active && savedPhone) setPhone(savedPhone);
       if (active) setReady(true);
     };
     restore();
@@ -73,18 +64,13 @@ export default function AdminPortal(props: Props) {
         if (!/^\d{6}$/.test(pin)) throw new Error('PIN harus tepat 6 digit');
         const result = await adminApi('register', { phone: normalizedPhone, password, pin }, '');
         localStorage.setItem(PHONE_KEY, normalizedPhone);
-        localStorage.setItem(PIN_KEY, pin);
         applySession(result);
       } else {
         const result = await adminApi('login', { phone: normalizedPhone, password }, '');
-        if (result.pinSetupRequired) {
-          setPendingToken(result.token);
-          setPhone(normalizedPhone);
-          setPinSetup(true);
-        } else {
-          applySession(result);
-          setPhone(normalizedPhone);
-        }
+        setPendingToken(result.token);
+        setPhone(normalizedPhone);
+        setConfirmExistingPin(!result.pinSetupRequired);
+        setPinSetup(true);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Autentikasi gagal');
@@ -96,12 +82,17 @@ export default function AdminPortal(props: Props) {
     if (!/^\d{6}$/.test(newPin)) { setError('PIN harus tepat 6 digit'); return; }
     setBusy(true); setError('');
     try {
-      await adminApi('set-pin', { newPin }, pendingToken);
-      const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
-      localStorage.setItem(PHONE_KEY, normalizePhone(phone));
-      localStorage.setItem(PIN_KEY, newPin);
-      applySession(result);
+      if (confirmExistingPin) {
+        const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
+        applySession(result);
+      } else {
+        await adminApi('set-pin', { newPin }, pendingToken);
+        const result = await adminApi('pin-login', { phone: normalizePhone(phone), pin: newPin }, '');
+        applySession(result);
+      }
+      setNewPin('');
       setPinSetup(false);
+      setConfirmExistingPin(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal menyimpan PIN');
     } finally { setBusy(false); }
@@ -114,7 +105,6 @@ export default function AdminPortal(props: Props) {
     if (!/^\d{6}$/.test(nextPin)) { window.alert('PIN baru harus tepat 6 digit'); return; }
     try {
       await adminApi('change-pin', { currentPin, newPin: nextPin });
-      localStorage.setItem(PIN_KEY, nextPin);
       window.alert('PIN berhasil diperbarui.');
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Gagal mengubah PIN');
@@ -122,10 +112,12 @@ export default function AdminPortal(props: Props) {
   };
 
   const logout = () => {
+    sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem('tokopedia_admin_profile');
+    localStorage.removeItem('tokopedia_admin_pin');
     localStorage.removeItem(PHONE_KEY);
-    localStorage.removeItem(PIN_KEY);
+    localStorage.removeItem('tokopedia_admin_pin');
     setProfile(null); setPassword(''); setPin('');
   };
 
@@ -148,12 +140,12 @@ export default function AdminPortal(props: Props) {
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mb-3"><LockKeyhole size={28}/></div>
           <h1 className="text-xl font-black text-gray-900">Tokopedia Admin</h1>
-          <p className="text-xs text-gray-500 mt-1">{pinSetup ? 'Buat PIN pertama untuk akun ini' : mode === 'login' ? 'Masuk menggunakan nomor telepon' : 'Daftarkan akun pengguna baru'}</p>
+          <p className="text-xs text-gray-500 mt-1">{pinSetup ? (confirmExistingPin ? 'Konfirmasi PIN akun' : 'Buat PIN pertama untuk akun ini') : mode === 'login' ? 'Masuk menggunakan nomor telepon' : 'Daftarkan akun pengguna baru'}</p>
         </div>
         {pinSetup ? (
           <form onSubmit={saveFirstPin} className="space-y-4">
-            <label className="block text-xs font-bold text-gray-600">PIN baru (6 digit)<input autoFocus type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center text-2xl tracking-[0.5em]" placeholder="••••••"/></label>
-            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Menyimpan...' : 'Simpan PIN dan lanjutkan'}</button>
+            <label className="block text-xs font-bold text-gray-600">{confirmExistingPin ? 'PIN akun (6 digit)' : 'PIN baru (6 digit)'}<input autoFocus type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={e=>setNewPin(e.target.value.replace(/\D/g,'').slice(0,6))} className="mt-1 w-full border rounded-xl p-3 text-center text-2xl tracking-[0.5em]" placeholder="••••••"/></label>
+            <button disabled={busy} className="w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold">{busy ? 'Memverifikasi...' : confirmExistingPin ? 'Verifikasi PIN dan masuk' : 'Simpan PIN dan lanjutkan'}</button>
           </form>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -171,7 +163,7 @@ export default function AdminPortal(props: Props) {
           </form>
         )}
         {error && pinSetup && <p className="text-xs text-red-600 bg-red-50 rounded-lg p-3 mt-3">{error}</p>}
-        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> PIN tersimpan di perangkat ini untuk login berikutnya</div>
+        <div className="mt-6 pt-4 border-t text-[10px] text-gray-400 flex items-center justify-center gap-1"><ShieldCheck size={13}/> PIN diverifikasi di server dan tidak disimpan di browser</div>
       </div>
     </div>
   );
