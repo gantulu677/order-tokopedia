@@ -18,7 +18,7 @@ import {
   ThumbsUp,
   Image as ImageIcon
 } from 'lucide-react';
-import { Product } from '../types';
+import { Product, createDefaultProductFeatures } from '../types';
 
 interface ProductDetailProps {
   produks: Product[];
@@ -79,6 +79,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
           id: data.produks_id,
           title: data.title,
           description: data.description,
+          features: Array.isArray(data.features) ? data.features : createDefaultProductFeatures(),
           category: data.category,
           brand: data.brand,
           media: Array.isArray(data.media) ? data.media : [],
@@ -356,8 +357,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ produks }) => {
           <div className="h-[8px] bg-gray-50 -mx-4 border-y border-gray-100" />
 
           <section className="space-y-3 text-sm">
-            <h3 className="font-bold text-base">Detail Produk</h3>
-            <div className="space-y-2"><div className="flex justify-between pb-2"><span className="text-gray-400">Kondisi</span><span className="font-semibold">Baru</span></div><div className="flex justify-between pb-2"><span className="text-gray-400">Etalase</span><span className="text-green-500 font-bold">{product.brand}</span></div></div>
+            <h3 className="font-bold text-base">Spesifikasi dan Fitur</h3>
+            <div className="space-y-2">
+              {(Array.isArray(product.features) ? product.features : []).map((feature: { label: string; value: string }, index: number) => (
+                <div key={`${feature.label}-${index}`} className="flex justify-between gap-4 border-b border-gray-50 pb-2 last:border-0">
+                  <span className="text-gray-400">{feature.label}</span>
+                  <span className="font-semibold text-right">{feature.value}</span>
+                </div>
+              ))}
+            </div>
             <p className="text-gray-600 leading-relaxed mt-2">{product.description}</p>
           </section>
 

@@ -1,7 +1,18 @@
+export interface ProductFeature {
+  label: string;
+  value: string;
+}
+
+export const createDefaultProductFeatures = (): ProductFeature[] => [
+  { label: 'Kondisi', value: 'Bekas' },
+  { label: 'Etalase', value: '' },
+];
+
 export interface Product {
   produks_id: string;
   title: string;
   description: string;
+  features: ProductFeature[];
   category: string;
   brand: string;
   media: string[];
