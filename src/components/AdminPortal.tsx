@@ -17,6 +17,7 @@ type Step = 'phone' | 'register' | 'set-pin' | 'login' | 'recover';
 const PHONE_KEY = 'tokopedia_admin_phone';
 const TOKEN_KEY = 'tokopedia_admin_token';
 const PROFILE_KEY = 'tokopedia_admin_profile';
+const LEGACY_PIN_KEY = 'tokopedia_admin_pin';
 const inputClass = 'mt-1 w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-green-100 focus:border-green-500';
 const buttonClass = 'w-full bg-[#00AA5B] text-white rounded-xl p-3 font-bold disabled:opacity-60';
 
@@ -53,6 +54,7 @@ export default function AdminPortal(props: Props) {
   useEffect(() => {
     let active = true;
     const restore = async () => {
+      localStorage.removeItem(LEGACY_PIN_KEY);
       const savedPhone = localStorage.getItem(PHONE_KEY) || '';
       const token = localStorage.getItem(TOKEN_KEY) || '';
       if (savedPhone) setPhone(savedPhone);
@@ -159,6 +161,7 @@ export default function AdminPortal(props: Props) {
 
   const logout = () => {
     clearStoredSession();
+    localStorage.removeItem(LEGACY_PIN_KEY);
     setProfile(null);
     setPassword('');
     setPin('');
