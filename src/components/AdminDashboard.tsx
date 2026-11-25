@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Search
 } from 'lucide-react';
-import { Product, ColorVariant, StorageVariant } from '../types';
+import { Product, ProductFeature, ColorVariant, StorageVariant, createDefaultProductFeatures } from '../types';
 import { initialProduksList } from '../data';
 import { adminUploadImage } from '../lib/adminApi';
 
@@ -135,7 +135,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleEdit = (product: Product) => {
-    setFormData(product);
+    setFormData({ ...product, features: Array.isArray(product.features) ? product.features : createDefaultProductFeatures() });
     setEditingId(product.produks_id);
     setIsAdding(false);
   };
@@ -193,9 +193,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const colors = typeof finalProduct.colors === 'string' ? JSON.parse(finalProduct.colors || '[]') : finalProduct.colors;
       const variants = typeof finalProduct.variants === 'string' ? JSON.parse(finalProduct.variants || '[]') : finalProduct.variants;
+      const features = finalProduct.features;
       if (!Array.isArray(colors) || !Array.isArray(variants)) throw new Error('Warna dan varian harus berupa JSON array.');
+      if (!Array.isArray(features) || !features.every((feature: ProductFeature) =>
+        feature && typeof feature.label === 'string' && typeof feature.value === 'string'
+      )) throw new Error('Fitur produk harus berupa daftar Label dan Value.');
       if (Number(finalProduct.stock_sold) > Number(finalProduct.stock_total)) throw new Error('Stok terjual tidak boleh melebihi total stok.');
-      const payload = { ...finalProduct, colors: JSON.stringify(colors), variants: JSON.stringify(variants), media: (finalProduct.media || []).filter(Boolean) } as Product;
+      const payload = {
+        ...finalProduct,
+        features: features.map((feature: ProductFeature) => ({ label: feature.label, value: feature.value })),
+        colors: JSON.stringify(colors),
+        variants: JSON.stringify(variants),
+        media: (finalProduct.media || []).filter(Boolean)
+      } as Product;
       if (isAdding) await onAdd(payload);
       else await onEdit(payload);
       if (onRefresh) await onRefresh();
@@ -315,6 +325,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   placeholder="Tulis spesifikasi lengkap dan keunggulan produk..."
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Spesifikasi dan Fitur */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-black text-gray-800 uppercase tracking-wider">Spesifikasi dan Fitur</h2>
+              <button
+                type="button"
+                onClick={() => updateField('features', [...(formData.features || []), { label: '', value: '' }])}
+                className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-[11px] font-bold text-[#00AA5B]"
+              >
+                <Plus size={14} /> Tambah Fitur
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(formData.features || []).map((feature, index) => (
+                <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <input
+                    type="text"
+                    aria-label={`Label fitur ${index + 1}`}
+                    value={feature.label}
+                    onChange={e => updateField('features', (formData.features || []).map((item, itemIndex) => itemIndex === index ? { ...item, label: e.target.value } : item))}
+                    placeholder="Label"
+                    className="min-w-0 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm"
+                  />
+                  <input
+                    type="text"
+                    aria-label={`Value fitur ${index + 1}`}
+                    value={feature.value}
+                    onChange={e => updateField('features', (formData.features || []).map((item, itemIndex) => itemIndex === index ? { ...item, value: e.target.value } : item))}
+                    placeholder="Value"
+                    className="min-w-0 w-full bg-[#FAFAFA] border border-gray-100 rounded-xl px-3 py-3 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateField('features', (formData.features || []).filter((_, itemIndex) => itemIndex !== index))}
+                    aria-label={`Hapus fitur ${index + 1}`}
+                    className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              {(formData.features || []).length === 0 && (
+                <p className="text-xs text-gray-400">Belum ada fitur produk. Tambahkan fitur sesuai kebutuhan.</p>
+              )}
             </div>
           </div>
 
