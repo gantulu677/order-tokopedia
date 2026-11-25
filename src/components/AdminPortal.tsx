@@ -51,8 +51,10 @@ export default function AdminPortal(props: Props) {
           const result = await adminApi('pin-login', { phone: savedPhone, pin: savedPin }, '');
           if (active) applySession(result);
         } catch {
+          localStorage.removeItem(PIN_KEY);
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(PROFILE_KEY);
+          if (active) setPhone(savedPhone);
         }
       }
       if (active) setReady(true);
